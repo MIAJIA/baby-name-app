@@ -118,7 +118,7 @@ export default function SearchPage() {
           });
 
           if (!analysisResponse.ok) {
-            throw new Error(`Failed to analyze names: ${analysisResponse.statusText}`);
+            throw new Error(`Failed to analyze names: ${JSON.stringify(analysisResponse, null, 2)}`);
           }
 
           const analysisData = await analysisResponse.json();
@@ -228,7 +228,7 @@ export default function SearchPage() {
         });
 
         if (!analysisResponse.ok) {
-          throw new Error(`Failed to analyze names: ${analysisResponse.statusText}`);
+          throw new Error(`Failed to analyze names: ${JSON.stringify(analysisResponse, null, 2)}`);
         }
 
         const analysisData = await analysisResponse.json();
