@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import SearchForm, { SearchCriteria } from '@/components/search/SearchForm';
 import NameCard from '@/components/name-details/NameCard';
 import { NameMatchAnalysis } from '@/types/name-analysis';
@@ -26,6 +27,7 @@ interface ExtendedSearchCriteria extends SearchCriteria {
 
 export default function SearchPage() {
   const router = useRouter();
+  const t = useTranslations('SearchPage');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<NameMatchAnalysis[]>([]);
   const [streamingResults, setStreamingResults] = useState<NameMatchAnalysis[]>([]);
@@ -533,7 +535,7 @@ export default function SearchPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Find Your Perfect Baby Name</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('findYourPerfectBabyName')}</h1>
 
       <SearchForm onSearch={handleSearch} isLoading={isLoading} />
 
@@ -541,12 +543,12 @@ export default function SearchPage() {
         <div className="mt-8 p-6 border rounded-lg bg-slate-50">
           <div className="flex items-center justify-center mb-4">
             <Loader2 className="h-8 w-8 animate-spin mr-3" />
-            <h2 className="text-xl font-semibold">Searching for Names...</h2>
+            <h2 className="text-xl font-semibold">{t('searchingForNames')}</h2>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Names Processed:</span>
+              <span>{t('namesProcessedLabel')}</span>
               <span className="font-medium">{totalProcessed}</span>
             </div>
 
@@ -558,13 +560,13 @@ export default function SearchPage() {
             </div>
 
             <div className="flex justify-between text-sm">
-              <span>Matches Found:</span>
+              <span>{t('matchesFoundLabel')}</span>
               <span className="font-medium">{matchesFound}</span>
             </div>
 
             {streamingResults.length > 0 && (
               <div className="mt-4">
-                <h3 className="text-lg font-medium mb-2">Matches So Far:</h3>
+                <h3 className="text-lg font-medium mb-2">{t('matchesSoFar')}:</h3>
                 <div className="flex flex-wrap gap-2">
                   {streamingResults.slice(0, 10).map(result => (
                     <span key={result.name} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
@@ -581,14 +583,14 @@ export default function SearchPage() {
             )}
 
             <p className="text-xs text-muted-foreground mt-2">
-              Each name is analyzed for meaning, origin, and compatibility with your criteria.
+              {t('eachNameAnalyzed')}
             </p>
 
             <div className="mt-3 text-center text-sm text-gray-500">
-              Search in progress for {searchDuration} seconds
+              {t('searchInProgress')} {searchDuration} seconds
               {searchDuration > 45 && (
                 <p className="text-amber-600 mt-1">
-                  This search is taking longer than usual. You can continue waiting or try with fewer names.
+                  {t('searchLongerMessage')}
                 </p>
               )}
             </div>
@@ -612,7 +614,7 @@ export default function SearchPage() {
                   }
                 }}
               >
-                Cancel Search
+                {t('cancelSearch')}
               </Button>
             </div>
           </div>
@@ -627,7 +629,7 @@ export default function SearchPage() {
 
       {isStreaming && streamingResults.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-xl font-semibold mb-2">Preliminary Results ({streamingResults.length})</h3>
+          <h3 className="text-xl font-semibold mb-2">{t('preliminaryResults')}({streamingResults.length})</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {streamingResults.map((result) => (
               <NameCard
@@ -642,85 +644,22 @@ export default function SearchPage() {
         </div>
       )}
 
-      {/* {!isStreaming && searchPerformed && !isLoading && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <h3 className="text-lg font-medium text-green-800 mb-2">Search Summary</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-green-700">Total Names Processed:</p>
-              <p className="font-bold text-green-900">{totalProcessed}</p>
-            </div>
-            <div>
-              <p className="text-sm text-green-700">Matching Names Found:</p>
-              <p className="font-bold text-green-900">{matchesFound}</p>
-            </div>
-          </div>
-
-          {results.length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm text-green-700">Matched Names:</p>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {results.map(result => (
-                  <span key={result.name} className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    {result.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {currentCriteria && (
-            <div className="mt-3 text-xs text-green-600">
-              <p>Search criteria: {currentCriteria.gender} names
-                {currentCriteria.meaningTheme ? ` with theme "${currentCriteria.meaningTheme}"` : ''}
-                {currentCriteria.chineseMetaphysics ? ` and Chinese metaphysics "${currentCriteria.chineseMetaphysics}"` : ''}
-              </p>
-            </div>
-          )}
-
-          {totalProcessed < targetNameCount && (
-            <div className="mt-2 text-amber-600 text-sm">
-              <p>Note: Only {totalProcessed} names were processed out of the requested {targetNameCount}.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => {
-                  if (currentCriteria) {
-                    // Expand the year range by 10 years
-                    const expandedStartYear = Math.max(1880, (currentCriteria.startYear || 2013) - 10);
-                    handleSearch({
-                      ...currentCriteria,
-                      startYear: expandedStartYear
-                    });
-                  }
-                }}
-              >
-                Expand Search (Try More Years)
-              </Button>
-            </div>
-          )}
-        </div>
-      )} */}
-
-      {favorites.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-2xl font-semibold mb-4">Your Favorites</h2>
+      {results.length > 0 && (
+        <div className="mt-8 flex justify-end">
           <Button
             variant="outline"
             onClick={() => router.push('/favorites')}
             className="mb-4"
           >
-            View All Favorites
+            {t('viewAllFavorites')}
           </Button>
         </div>
       )}
 
       <div className="mt-6 text-sm text-gray-600">
-        <p><strong>Number of Names to Find:</strong> This is the number of matching names you want to find, not the total number of names to search through. Higher numbers will take longer to process.</p>
+        <p>{t('namesInfoMessage')}</p>
       </div>
 
-      {/* 添加搜索结果组件 */}
       {searchPerformed && (
         <SearchResults
           matchingNames={matchingNames}
@@ -739,7 +678,7 @@ export default function SearchPage() {
         onClick={clearCache}
         className="ml-2"
       >
-        Clear Cache
+        {t('clearCache')}
       </Button>
     </div>
   );
