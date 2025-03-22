@@ -34,13 +34,30 @@ export async function analyzeNameMatch(
   name: string,
   gender: 'Male' | 'Female',
   meaningTheme: string,
-  chineseMetaphysics: string
+  chineseMetaphysics: string,
+  userChineseTranslation?: string
 ): Promise<NameMatchAnalysis> {
   try {
     // 首先检查缓存
     const cachedResult = getCachedAnalysis(name, gender, meaningTheme, chineseMetaphysics);
     if (cachedResult) {
       console.log(`[${new Date().toISOString()}] [Cache Hit] Using cached analysis for "${name}" with criteria: ${gender}, "${meaningTheme.substring(0, 30)}...", "${chineseMetaphysics.substring(0, 30)}..."`);
+
+      // If user provided a Chinese translation, override the cached one
+      if (userChineseTranslation) {
+        console.log(`[${new Date().toISOString()}] [Translation Override] Using user-provided Chinese translation: "${userChineseTranslation}"`);
+        return {
+          ...cachedResult,
+          chineseTranslations: [
+            {
+              translation: userChineseTranslation,
+              explanation: `User-provided Chinese translation for "${name}".`
+            },
+            ...(cachedResult.chineseTranslations.length > 0 ? [cachedResult.chineseTranslations[0]] : [])
+          ]
+        };
+      }
+
       return cachedResult;
     }
 
@@ -48,6 +65,9 @@ export async function analyzeNameMatch(
     console.log(`Analyzing name: ${name} for gender: ${gender}`);
     console.log(`Criteria - Meaning/Theme: ${meaningTheme}`);
     console.log(`Criteria - Chinese Metaphysics: ${chineseMetaphysics}`);
+    if (userChineseTranslation) {
+      console.log(`User-provided Chinese translation: ${userChineseTranslation}`);
+    }
 
     analysisCounter++;
     const startTime = performance.now();
@@ -56,14 +76,57 @@ export async function analyzeNameMatch(
     console.log(`[${new Date().toISOString()}] Starting OpenAI request for name: ${name}`);
 
     try {
-      // Use the standard API without response_format for GPT-4
+      // Prepare system message based on whether user provided a translation
+      let systemMessage = "";
+
+      if (userChineseTranslation) {
+        systemMessage = `You are an expert in name analysis, specializing in cultural symbolism, psychology, literature, art, phonetics, and Chinese metaphysics. Your task is to analyze the given name based on the user's criteria and provide a structured, cross-cultural analysis. Your analysis must be comprehensive but concise, ensuring it aligns with cultural depth and psychological impact.
+
+NOTE: The user has already provided a Chinese translation for this name: "${userChineseTranslation}". DO NOT generate new Chinese translations. Use ONLY this translation in your analysis.
+
+Your response must follow the structured format below.`;
+      } else {
+        systemMessage = `You are an expert in name analysis, specializing in cultural symbolism, psychology, literature, art, phonetics, and Chinese metaphysics. Your task is to analyze the given name based on the user's criteria and provide a structured, cross-cultural analysis. Your analysis must be comprehensive but concise, ensuring it aligns with cultural depth and psychological impact.
+
+CRITICAL REQUIREMENT: You MUST provide at least 2 Chinese translations of the name.
+Each translation MUST include both the Chinese characters and an explanation of their meaning and pronunciation.
+
+Your response must follow the structured format below.`;
+      }
+
+      // Prepare user message based on whether user provided a translation
+      let contentRequirements = "";
+
+      if (userChineseTranslation) {
+        contentRequirements = `Your response must include:
+1. Analysis of the provided Chinese Translation: "${userChineseTranslation}"
+2. Cultural & Psychological Symbolism (historical figures, famous namesakes, psychological impact)
+3. Literary & Artistic Relevance (appearance in literature, art, music, and media)
+4. Phonetic & Linguistic Analysis (pronunciation across languages, phonetic appeal)
+5. Chinese Metaphysics (Bazi, Qi Men Dun Jia, Feng Shui, Five Elements)
+6. Western Numerology & Astrology (if applicable, numerology, planetary influences)`;
+      } else {
+        contentRequirements = `Your response must include:
+1. Chinese Translations (at least two, with pronunciation and meaning)
+2. Cultural & Psychological Symbolism (historical figures, famous namesakes, psychological impact)
+3. Literary & Artistic Relevance (appearance in literature, art, music, and media)
+4. Phonetic & Linguistic Analysis (pronunciation across languages, phonetic appeal)
+5. Chinese Metaphysics (Bazi, Qi Men Dun Jia, Feng Shui, Five Elements)
+6. Western Numerology & Astrology (if applicable, numerology, planetary influences)
+
+MANDATORY REQUIREMENT: You MUST include at least 2 Chinese translations of the name in your response.
+For each translation, you MUST provide:
+1. The Chinese characters (translation)
+2. An explanation of the meaning and pronunciation`;
+      }
+
       const apiCallStart = performance.now();
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             "role": "system",
-            "content": "You are an expert in name analysis, specializing in cultural symbolism, psychology, literature, art, phonetics, and Chinese metaphysics. Your task is to analyze the given name based on the user's criteria and provide a structured, cross-cultural analysis. Your analysis must be comprehensive but concise, ensuring it aligns with cultural depth and psychological impact. \n\nCRITICAL REQUIREMENT: You MUST provide at least 2 Chinese translations of the name.\nEach translation MUST include both the Chinese characters and an explanation of their meaning and pronunciation. \n\nYour response must follow the structured format below."
+            "content": systemMessage
           },
           {
             "role": "user",
@@ -71,18 +134,9 @@ export async function analyzeNameMatch(
             - Meaning/Theme desired: ${meaningTheme}
             - Chinese Metaphysics criteria: ${chineseMetaphysics}
 
-            Your response must include:
-            1. Chinese Translations (at least two, with pronunciation and meaning)
-            2. Cultural & Psychological Symbolism (historical figures, famous namesakes, psychological impact)
-            3. Literary & Artistic Relevance (appearance in literature, art, music, and media)
-            4. Phonetic & Linguistic Analysis (pronunciation across languages, phonetic appeal)
-            5. Chinese Metaphysics (Bazi, Qi Men Dun Jia, Feng Shui, Five Elements)
-            6. Western Numerology & Astrology (if applicable, numerology, planetary influences)
+            ${contentRequirements}
 
-            MANDATORY REQUIREMENT: You MUST include at least 2 Chinese translations of the name in your response.
-            For each translation, you MUST provide:
-            1. The Chinese characters (translation)
-            2. An explanation of the meaning and pronunciation
+            For each category of analysis, provide a score on a scale of 1-10 (where 10 is the highest match) indicating how well the name fits the criteria.
 
             Please provide a JSON response with the following structure:
             {
@@ -90,48 +144,53 @@ export async function analyzeNameMatch(
               "origin": "origin of the name",
               "meaning": "meaning of the name",
               "chineseTranslations": [
-                { "translation": "中文名1", "explanation": "explanation 1" },
-                { "translation": "中文名2", "explanation": "explanation 2" }
+                { "translation": "${userChineseTranslation || '中文名1'}", "explanation": "explanation 1" }${userChineseTranslation ? '' : ',\n                { "translation": "中文名2", "explanation": "explanation 2" }'}
               ],
-              "characterAnalysis": { "matches": true/false, "explanation": "..." },
-              "nameAnalysis": { "matches": true/false, "explanation": "..." },
-              "baziAnalysis": { "matches": true/false, "explanation": "..." },
-              "qiMenDunJiaAnalysis": { "matches": true/false, "explanation": "..." },
-              "fengShuiAnalysis": { "matches": true/false, "explanation": "..." },
+              "characterAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+              "nameAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+              "baziAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+              "qiMenDunJiaAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+              "fengShuiAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
               "culturalPsychologicalAnalysis": {
                 "matches": true/false,
                 "explanation": "...",
                 "historicalReferences": ["..."],
-                "psychologicalImpact": "..."
+                "psychologicalImpact": "...",
+                "score": 0-10
               },
               "literaryArtisticAnalysis": {
                 "matches": true/false,
                 "explanation": "...",
                 "literaryReferences": ["..."],
-                "artisticConnections": ["..."]
+                "artisticConnections": ["..."],
+                "score": 0-10
               },
               "linguisticAnalysis": {
                 "matches": true/false,
                 "explanation": "...",
                 "phonetics": "...",
-                "pronunciationVariations": ["..."]
+                "pronunciationVariations": ["..."],
+                "score": 0-10
               },
               "fiveElementAnalysis": {
                 "matches": true/false,
                 "explanation": "...",
-                "associatedElement": "..."
+                "associatedElement": "...",
+                "score": 0-10
               },
               "numerologyAnalysis": {
                 "matches": true/false,
                 "explanation": "...",
                 "lifePathNumber": 0,
-                "personalityNumber": 0
+                "personalityNumber": 0,
+                "score": 0-10
               },
               "astrologyAnalysis": {
                 "matches": true/false,
                 "explanation": "...",
                 "associatedZodiac": "...",
-                "planetaryInfluence": "..."
+                "planetaryInfluence": "...",
+                "score": 0-10
               },
               "summary": "..."
             }`
@@ -167,6 +226,29 @@ export async function analyzeNameMatch(
 
           parsedResponse = JSON.parse(jsonContent);
           console.log('Successfully parsed JSON response');
+
+          // If user provided a translation, ensure it's used
+          if (userChineseTranslation && parsedResponse) {
+            // Make sure the user's translation is the first one
+            const existingTranslations = parsedResponse.chineseTranslations || [];
+            const userTranslationEntry = {
+              translation: userChineseTranslation,
+              explanation: existingTranslations.length > 0 && existingTranslations[0].translation === userChineseTranslation ?
+                existingTranslations[0].explanation :
+                `User-provided Chinese translation for "${name}".`
+            };
+
+            parsedResponse.chineseTranslations = [userTranslationEntry];
+
+            // Only include a second translation if it's different from the user's
+            if (existingTranslations.length > 1 && existingTranslations[1].translation !== userChineseTranslation) {
+              parsedResponse.chineseTranslations.push(existingTranslations[1]);
+            } else if (existingTranslations.length > 0 && existingTranslations[0].translation !== userChineseTranslation) {
+              parsedResponse.chineseTranslations.push(existingTranslations[0]);
+            }
+
+            console.log(`[${new Date().toISOString()}] Ensured user-provided Chinese translation "${userChineseTranslation}" is used in the analysis`);
+          }
         } catch (parseError) {
           console.error('Error parsing JSON response:', parseError);
           console.log('First 500 chars of response:', content.substring(0, 500));
@@ -175,7 +257,23 @@ export async function analyzeNameMatch(
       }
 
       // Rest of the function remains the same
-      const result = parsedResponse ? calculateOverallMatch(parsedResponse) : createDefaultAnalysis(name, `Failed to parse response for ${name}`);
+      let result = parsedResponse ? calculateOverallMatch(parsedResponse) : createDefaultAnalysis(name, `Failed to parse response for ${name}`);
+
+      // One final check to ensure user translation is respected
+      if (userChineseTranslation && result) {
+        const hasUserTranslation = result.chineseTranslations.some(t => t.translation === userChineseTranslation);
+        if (!hasUserTranslation) {
+          console.log(`[${new Date().toISOString()}] Adding missing user-provided translation to final result`);
+          result.chineseTranslations = [
+            {
+              translation: userChineseTranslation,
+              explanation: `User-provided Chinese translation for "${name}".`
+            },
+            ...result.chineseTranslations.slice(0, 1)
+          ];
+        }
+      }
+
       console.log('Final result with chineseTranslations:', result.chineseTranslations);
 
       // 将结果存入缓存
@@ -195,16 +293,27 @@ export async function analyzeNameMatch(
       name,
       origin: "Unknown (error occurred)",
       meaning: "Unknown (error occurred)",
-      chineseTranslations: [
-        {
-          translation: `${name}的中文翻译1`,
-          explanation: `这是${name}的默认中文翻译，因为分析过程中发生错误。`
-        },
-        {
-          translation: `${name}的中文翻译2`,
-          explanation: `这是${name}的另一个默认中文翻译，因为分析过程中发生错误。`
-        }
-      ],
+      chineseTranslations: userChineseTranslation ?
+        [
+          {
+            translation: userChineseTranslation,
+            explanation: `User-provided Chinese translation for "${name}".`
+          },
+          {
+            translation: `${name}的中文翻译2`,
+            explanation: `这是${name}的另一个默认中文翻译，因为分析过程中发生错误。`
+          }
+        ] :
+        [
+          {
+            translation: `${name}的中文翻译1`,
+            explanation: `这是${name}的默认中文翻译，因为分析过程中发生错误。`
+          },
+          {
+            translation: `${name}的中文翻译2`,
+            explanation: `这是${name}的另一个默认中文翻译，因为分析过程中发生错误。`
+          }
+        ],
       culturalPsychologicalAnalysis: {
         matches: false,
         explanation: `Error during analysis: ${(error as Error).message}`,
@@ -378,28 +487,53 @@ export async function analyzeNamesBatchApi(
   names: string[],
   gender: 'Male' | 'Female',
   meaningTheme: string,
-  chineseMetaphysics: string
+  chineseMetaphysics: string,
+  userChineseTranslations?: Record<string, string>
 ): Promise<NameMatchAnalysis[]> {
   if (names.length === 0) return [];
 
   console.log(`[${new Date().toISOString()}] [Batch API] Analyzing ${names.length} names in a single API call`);
   console.log(`[${new Date().toISOString()}] [Batch API] Names: ${names.join(', ')}`);
 
+  if (userChineseTranslations && Object.keys(userChineseTranslations).length > 0) {
+    console.log(`[${new Date().toISOString()}] [Batch API] User provided Chinese translations for ${Object.keys(userChineseTranslations).length} names`);
+  }
+
   const apiStartTime = performance.now();
   try {
+    // Prepare the system message based on whether there are user translations
+    const hasUserTranslations = userChineseTranslations && Object.keys(userChineseTranslations).length > 0;
+
+    let systemMessage = `You are an expert in name analysis, Chinese metaphysics, and cultural meanings of names.
+    Analyze each of the provided names based on the user's criteria and provide a structured analysis.
+    Your analysis should be thorough but concise, focusing on whether each name matches the user's criteria.`;
+
+    if (hasUserTranslations) {
+      systemMessage += `\n\nIMPORTANT: For some names, the user has already provided Chinese translations. DO NOT generate new translations for these names. Use ONLY the provided translations in your analysis.`;
+    } else {
+      systemMessage += `\n\nCRITICAL REQUIREMENT: For EACH name, you MUST provide at least 2 Chinese translations.
+      Each translation MUST include both the Chinese characters and an explanation of their meaning and pronunciation.
+      This is a mandatory part of your response and cannot be omitted under any circumstances.`;
+    }
+
+    // Prepare a list of names with their translations if provided
+    let namesWithTranslations = '';
+    if (hasUserTranslations) {
+      namesWithTranslations = 'Names with user-provided Chinese translations:\n';
+      names.forEach(name => {
+        if (userChineseTranslations[name]) {
+          namesWithTranslations += `- ${name}: "${userChineseTranslations[name]}"\n`;
+        }
+      });
+    }
+
     const apiCallStart = performance.now();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: `You are an expert in name analysis, Chinese metaphysics, and cultural meanings of names.
-          Analyze each of the provided names based on the user's criteria and provide a structured analysis.
-          Your analysis should be thorough but concise, focusing on whether each name matches the user's criteria.
-
-          CRITICAL REQUIREMENT: For EACH name, you MUST provide at least 2 Chinese translations.
-          Each translation MUST include both the Chinese characters and an explanation of their meaning and pronunciation.
-          This is a mandatory part of your response and cannot be omitted under any circumstances.`
+          content: systemMessage
         },
         {
           role: "user",
@@ -407,6 +541,7 @@ export async function analyzeNamesBatchApi(
           - Names to analyze: ${names.join(', ')}
           - Meaning/Theme desired: ${meaningTheme}
           - Chinese Metaphysics criteria: ${chineseMetaphysics}
+          ${hasUserTranslations ? '\n' + namesWithTranslations : ''}
 
           Provide your analysis for EACH name in a structured JSON format that evaluates if the name matches the criteria.
 
@@ -415,11 +550,11 @@ export async function analyzeNamesBatchApi(
           For each name, include the following structure:
           {
             "name": "Name being analyzed",
-            "characterAnalysis": { "matches": true/false, "explanation": "..." },
-            "baziAnalysis": { "matches": true/false, "explanation": "..." },
-            "qiMenDunJiaAnalysis": { "matches": true/false, "explanation": "..." },
-            "fengShuiAnalysis": { "matches": true/false, "explanation": "..." },
-            "nameAnalysis": { "matches": true/false, "explanation": "..." },
+            "characterAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+            "baziAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+            "qiMenDunJiaAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+            "fengShuiAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
+            "nameAnalysis": { "matches": true/false, "explanation": "...", "score": 0-10 },
             "chineseTranslations": [
               { "translation": "中文名1", "explanation": "Explanation of meaning and pronunciation" },
               { "translation": "中文名2", "explanation": "Explanation of meaning and pronunciation" }
@@ -464,6 +599,28 @@ export async function analyzeNamesBatchApi(
         // 确保包含必要的字段
         const processedAnalysis = ensureValidAnalysis(analysis);
 
+        // If user provided a translation for this name, ensure it's used
+        if (userChineseTranslations && userChineseTranslations[analysis.name]) {
+          const userTranslation = userChineseTranslations[analysis.name];
+          console.log(`[${new Date().toISOString()}] [Batch API] Using user-provided translation for ${analysis.name}: "${userTranslation}"`);
+
+          // Ensure the user's translation is the first one
+          const existingTranslations = processedAnalysis.chineseTranslations || [];
+          processedAnalysis.chineseTranslations = [
+            {
+              translation: userTranslation,
+              explanation: `User-provided Chinese translation for "${analysis.name}".`
+            }
+          ];
+
+          // Add a second translation if available and different
+          if (existingTranslations.length > 0 && existingTranslations[0].translation !== userTranslation) {
+            processedAnalysis.chineseTranslations.push(existingTranslations[0]);
+          } else if (existingTranslations.length > 1) {
+            processedAnalysis.chineseTranslations.push(existingTranslations[1]);
+          }
+        }
+
         // 计算整体匹配度
         const finalAnalysis = calculateOverallMatch(processedAnalysis);
 
@@ -494,7 +651,8 @@ export async function analyzeNamesBatchApi(
     // 生成默认分析结果
     return names.map(name => createDefaultAnalysis(
       name,
-      `Error in batch API request: ${(error as Error).message}`
+      `Error in batch API request: ${(error as Error).message}`,
+      userChineseTranslations ? userChineseTranslations[name] : undefined
     ));
   }
 }
@@ -553,9 +711,13 @@ export async function batchAnalyzeNames(
   meaningTheme: string,
   chineseMetaphysics: string,
   batchSize = 5,
-  targetMatches?: number
+  targetMatches?: number,
+  userChineseTranslations?: Record<string, string>
 ): Promise<NameMatchAnalysis[]> {
   console.log(`[${new Date().toISOString()}] Target matches: ${targetMatches || 'unlimited'}`);
+  if (userChineseTranslations && Object.keys(userChineseTranslations).length > 0) {
+    console.log(`[${new Date().toISOString()}] User provided ${Object.keys(userChineseTranslations).length} Chinese translations`);
+  }
 
   const batchStartTime = performance.now();
   const batchId = ++analysisCounter;
@@ -571,9 +733,31 @@ export async function batchAnalyzeNames(
   for (const name of names) {
     const cachedResult = getCachedAnalysis(name, gender, meaningTheme, chineseMetaphysics);
     if (cachedResult) {
-      cachedResults.push(cachedResult);
-      if (cachedResult.overallMatch) {
-        matchCount++;
+      // If user provided a translation, override the cached one
+      if (userChineseTranslations && userChineseTranslations[name]) {
+        const userTranslation = userChineseTranslations[name];
+        console.log(`[${new Date().toISOString()}] [Cache Hit] Overriding cached translation for "${name}" with user-provided: "${userTranslation}"`);
+
+        const modifiedResult = {
+          ...cachedResult,
+          chineseTranslations: [
+            {
+              translation: userTranslation,
+              explanation: `User-provided Chinese translation for "${name}".`
+            },
+            ...(cachedResult.chineseTranslations.length > 0 ? [cachedResult.chineseTranslations[0]] : [])
+          ].filter((t, i, arr) => i === 0 || t.translation !== arr[0].translation) // Ensure no duplicates
+        };
+
+        cachedResults.push(modifiedResult);
+        if (modifiedResult.overallMatch) {
+          matchCount++;
+        }
+      } else {
+        cachedResults.push(cachedResult);
+        if (cachedResult.overallMatch) {
+          matchCount++;
+        }
       }
     } else {
       namesToProcess.push(name);
@@ -613,8 +797,18 @@ export async function batchAnalyzeNames(
     try {
       const batchStartTime = performance.now();
 
+      // Extract the relevant translations for this batch
+      const batchTranslations = userChineseTranslations ?
+        Object.keys(userChineseTranslations)
+          .filter(name => batch.includes(name))
+          .reduce((obj, name) => {
+            obj[name] = userChineseTranslations[name];
+            return obj;
+          }, {} as Record<string, string>) :
+        undefined;
+
       // 使用批量API处理这一批名字
-      const batchResults = await analyzeNamesBatchApi(batch, gender, meaningTheme, chineseMetaphysics);
+      const batchResults = await analyzeNamesBatchApi(batch, gender, meaningTheme, chineseMetaphysics, batchTranslations);
 
       // 更新匹配计数
       const batchMatches = batchResults.filter(r => r.overallMatch).length;
@@ -640,14 +834,16 @@ export async function batchAnalyzeNames(
         if (targetMatches && matchCount >= targetMatches) break;
 
         try {
-          const analysis = await analyzeNameMatch(name, gender, meaningTheme, chineseMetaphysics);
+          const userTranslation = userChineseTranslations ? userChineseTranslations[name] : undefined;
+          const analysis = await analyzeNameMatch(name, gender, meaningTheme, chineseMetaphysics, userTranslation);
           results.push(analysis);
           if (analysis.overallMatch) matchCount++;
         } catch (nameError) {
           console.error(`[${new Date().toISOString()}] [Batch #${batchId}] Error processing individual name ${name}:`, nameError);
 
           // 添加默认分析结果
-          const defaultAnalysis = createDefaultAnalysis(name, `Error: ${(nameError as Error).message}`);
+          const userTranslation = userChineseTranslations ? userChineseTranslations[name] : undefined;
+          const defaultAnalysis = createDefaultAnalysis(name, `Error: ${(nameError as Error).message}`, userTranslation);
           results.push(defaultAnalysis);
         }
       }
@@ -689,10 +885,14 @@ export async function batchAnalyzeNamesWithPrefiltering(
   chineseMetaphysics: string,
   batchSize = 5,
   targetMatches?: number,
-  usePrefiltering = true
+  usePrefiltering = true,
+  userChineseTranslations?: Record<string, string>
 ): Promise<NameMatchAnalysis[]> {
   const totalStartTime = performance.now();
   console.log(`[${new Date().toISOString()}] Starting batch analysis with${usePrefiltering ? '' : 'out'} prefiltering for ${names.length} names`);
+  if (userChineseTranslations && Object.keys(userChineseTranslations).length > 0) {
+    console.log(`[${new Date().toISOString()}] User provided ${Object.keys(userChineseTranslations).length} Chinese translations`);
+  }
 
   // 如果启用预过滤，先进行预过滤
   let namesToAnalyze = names;
@@ -703,11 +903,24 @@ export async function batchAnalyzeNamesWithPrefiltering(
     namesToAnalyze = await prefilterNamesByMeaning(names, gender, meaningTheme);
     prefilterTime = performance.now() - prefilterStartTime;
     console.log(`[${new Date().toISOString()}] [API Timing] Prefiltering step: ${(prefilterTime / 1000).toFixed(2)}s (reduced from ${names.length} to ${namesToAnalyze.length} names)`);
+
+    // Make sure we include names with user translations even if they didn't pass prefiltering
+    if (userChineseTranslations && Object.keys(userChineseTranslations).length > 0) {
+      const translatedNames = Object.keys(userChineseTranslations);
+      const missingTranslatedNames = translatedNames.filter(name =>
+        names.includes(name) && !namesToAnalyze.includes(name)
+      );
+
+      if (missingTranslatedNames.length > 0) {
+        console.log(`[${new Date().toISOString()}] Adding ${missingTranslatedNames.length} names with user translations that were filtered out`);
+        namesToAnalyze = [...new Set([...namesToAnalyze, ...missingTranslatedNames])];
+      }
+    }
   }
 
   // 然后进行详细分析
   const analysisStartTime = performance.now();
-  const results = await batchAnalyzeNames(namesToAnalyze, gender, meaningTheme, chineseMetaphysics, batchSize, targetMatches);
+  const results = await batchAnalyzeNames(namesToAnalyze, gender, meaningTheme, chineseMetaphysics, batchSize, targetMatches, userChineseTranslations);
   const analysisTime = performance.now() - analysisStartTime;
 
   const totalTime = performance.now() - totalStartTime;
@@ -772,7 +985,8 @@ function calculateOverallMatch(analysis: ZodInfer<typeof NameMatchAnalysisSchema
 // 导出 Zod schema 以便在其他地方使用
 export const AnalysisCategory = z.object({
   matches: z.boolean(),
-  explanation: z.string()
+  explanation: z.string(),
+  score: z.number().min(0).max(10).optional()
 });
 
 export const NameMatchAnalysisSchema = z.object({
@@ -787,19 +1001,22 @@ export const NameMatchAnalysisSchema = z.object({
     matches: z.boolean(),
     explanation: z.string(),
     historicalReferences: z.array(z.string()).optional(),
-    psychologicalImpact: z.string().optional()
+    psychologicalImpact: z.string().optional(),
+    score: z.number().min(0).max(10).optional()
   }).optional(),
   literaryArtisticAnalysis: z.object({
     matches: z.boolean(),
     explanation: z.string(),
     literaryReferences: z.array(z.string()).optional(),
-    artisticConnections: z.array(z.string()).optional()
+    artisticConnections: z.array(z.string()).optional(),
+    score: z.number().min(0).max(10).optional()
   }).optional(),
   linguisticAnalysis: z.object({
     matches: z.boolean(),
     explanation: z.string(),
     phonetics: z.string().optional(),
-    pronunciationVariations: z.array(z.string()).optional()
+    pronunciationVariations: z.array(z.string()).optional(),
+    score: z.number().min(0).max(10).optional()
   }).optional(),
   baziAnalysis: AnalysisCategory.optional(),
   qiMenDunJiaAnalysis: AnalysisCategory.optional(),
@@ -807,83 +1024,105 @@ export const NameMatchAnalysisSchema = z.object({
   fiveElementAnalysis: z.object({
     matches: z.boolean(),
     explanation: z.string(),
-    associatedElement: z.string().optional()
+    associatedElement: z.string().optional(),
+    score: z.number().min(0).max(10).optional()
   }).optional(),
   numerologyAnalysis: z.object({
     matches: z.boolean(),
     explanation: z.string(),
     lifePathNumber: z.number().optional(),
-    personalityNumber: z.number().optional()
+    personalityNumber: z.number().optional(),
+    score: z.number().min(0).max(10).optional()
   }).optional(),
   astrologyAnalysis: z.object({
     matches: z.boolean(),
     explanation: z.string(),
     associatedZodiac: z.string().optional(),
-    planetaryInfluence: z.string().optional()
+    planetaryInfluence: z.string().optional(),
+    score: z.number().min(0).max(10).optional()
   }).optional(),
   summary: z.string().optional(),
   characterAnalysis: z.object({
     matches: z.boolean(),
-    explanation: z.string()
+    explanation: z.string(),
+    score: z.number().min(0).max(10).optional()
   }),
   nameAnalysis: z.object({
     matches: z.boolean(),
-    explanation: z.string()
+    explanation: z.string(),
+    score: z.number().min(0).max(10).optional()
   })
 });
 
-function createDefaultAnalysis(name: string, errorMessage: string): NameMatchAnalysis {
+function createDefaultAnalysis(name: string, errorMessage: string, userChineseTranslation?: string): NameMatchAnalysis {
   return {
     name,
     origin: "Unknown (error occurred)",
     meaning: "Unknown (error occurred)",
-    chineseTranslations: [
-      {
-        translation: `${name}的中文翻译1`,
-        explanation: `这是${name}的默认中文翻译，因为分析过程中发生错误。`
-      },
-      {
-        translation: `${name}的中文翻译2`,
-        explanation: `这是${name}的另一个默认中文翻译，因为分析过程中发生错误。`
-      }
-    ],
+    chineseTranslations: userChineseTranslation ?
+      [
+        {
+          translation: userChineseTranslation,
+          explanation: `User-provided Chinese translation for "${name}".`
+        },
+        {
+          translation: `${name}的中文翻译2`,
+          explanation: `这是${name}的另一个默认中文翻译，因为分析过程中发生错误。`
+        }
+      ] :
+      [
+        {
+          translation: `${name}的中文翻译1`,
+          explanation: `这是${name}的默认中文翻译，因为分析过程中发生错误。`
+        },
+        {
+          translation: `${name}的中文翻译2`,
+          explanation: `这是${name}的另一个默认中文翻译，因为分析过程中发生错误。`
+        }
+      ],
     culturalPsychologicalAnalysis: {
       matches: false,
       explanation: errorMessage,
       historicalReferences: [],
-      psychologicalImpact: "Unknown due to error"
+      psychologicalImpact: "Unknown due to error",
+      score: 0
     },
     literaryArtisticAnalysis: {
       matches: false,
       explanation: errorMessage,
       literaryReferences: [],
-      artisticConnections: []
+      artisticConnections: [],
+      score: 0
     },
     linguisticAnalysis: {
       matches: false,
       explanation: errorMessage,
       phonetics: "",
-      pronunciationVariations: []
+      pronunciationVariations: [],
+      score: 0
     },
-    baziAnalysis: { matches: false, explanation: errorMessage },
-    qiMenDunJiaAnalysis: { matches: false, explanation: errorMessage },
-    fengShuiAnalysis: { matches: false, explanation: errorMessage },
+    baziAnalysis: { matches: false, explanation: errorMessage, score: 0 },
+    qiMenDunJiaAnalysis: { matches: false, explanation: errorMessage, score: 0 },
+    fengShuiAnalysis: { matches: false, explanation: errorMessage, score: 0 },
     fiveElementAnalysis: {
       matches: false,
       explanation: errorMessage,
-      associatedElement: "Unknown"
+      associatedElement: "Unknown",
+      score: 0
     },
     numerologyAnalysis: {
       matches: false,
       explanation: errorMessage,
       lifePathNumber: 0,
-      personalityNumber: 0
+      personalityNumber: 0,
+      score: 0
     },
     astrologyAnalysis: {
       matches: false,
       explanation: errorMessage,
       associatedZodiac: "Unknown",
-      planetaryInfluence: "Unknown"
+      planetaryInfluence: "Unknown",
+      score: 0
     },
     summary: errorMessage,
     overallMatch: false,
@@ -893,11 +1132,13 @@ function createDefaultAnalysis(name: string, errorMessage: string): NameMatchAna
     chineseMetaphysicsReason: "Error during analysis",
     characterAnalysis: {
       matches: false,
-      explanation: errorMessage
+      explanation: errorMessage,
+      score: 0
     },
     nameAnalysis: {
       matches: false,
-      explanation: errorMessage
+      explanation: errorMessage,
+      score: 0
     }
   };
 }

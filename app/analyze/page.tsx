@@ -46,6 +46,7 @@ export default function AnalyzePage() {
           gender,
           meaningTheme,
           chineseMetaphysics,
+          chineseTranslation: chineseTranslation.trim() || undefined,
         }),
       });
 
@@ -220,9 +221,21 @@ export default function AnalyzePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Name Origin and Meaning */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 bg-gray-50 rounded-md">
+                <h3 className="text-md font-semibold">Origin</h3>
+                <p>{analysis.origin || 'No origin information available'}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-md">
+                <h3 className="text-md font-semibold">Meaning</h3>
+                <p>{analysis.meaning || 'No meaning information available'}</p>
+              </div>
+            </div>
+
             {/* Chinese Translations */}
             {analysis.chineseTranslations && analysis.chineseTranslations.length > 0 && (
-              <div className="mb-6">
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold mb-2">Chinese Translations</h3>
                 <div className="space-y-3">
                   {analysis.chineseTranslations.map((translation, index) => (
@@ -243,31 +256,219 @@ export default function AnalyzePage() {
                 title="Character Analysis"
                 matches={analysis.characterAnalysis.matches}
                 explanation={analysis.characterAnalysis.explanation}
-              />
-
-              <AnalysisCategory
-                title="BaZi Analysis"
-                matches={analysis.baziAnalysis?.matches || false}
-                explanation={analysis.baziAnalysis?.explanation || ''}
-              />
-
-              <AnalysisCategory
-                title="Qi Men Dun Jia Analysis"
-                matches={analysis.qiMenDunJiaAnalysis?.matches || false}
-                explanation={analysis.qiMenDunJiaAnalysis?.explanation || ''}
-              />
-
-              <AnalysisCategory
-                title="Feng Shui Analysis"
-                matches={analysis.fengShuiAnalysis?.matches || false}
-                explanation={analysis.fengShuiAnalysis?.explanation || ''}
+                score={analysis.characterAnalysis.score}
               />
 
               <AnalysisCategory
                 title="Name Structure Analysis"
                 matches={analysis.nameAnalysis.matches}
                 explanation={analysis.nameAnalysis.explanation}
+                score={analysis.nameAnalysis.score}
               />
+
+              {/* Cultural & Psychological Analysis */}
+              {analysis.culturalPsychologicalAnalysis && (
+                <div className="space-y-2">
+                  <AnalysisCategory
+                    title="Cultural & Psychological Analysis"
+                    matches={analysis.culturalPsychologicalAnalysis.matches}
+                    explanation={analysis.culturalPsychologicalAnalysis.explanation}
+                    score={analysis.culturalPsychologicalAnalysis.score}
+                  />
+
+                  {analysis.culturalPsychologicalAnalysis.historicalReferences &&
+                    analysis.culturalPsychologicalAnalysis.historicalReferences.length > 0 && (
+                    <div className="pl-4 border-l-2 border-gray-200">
+                      <h4 className="text-sm font-medium">Historical References:</h4>
+                      <ul className="list-disc pl-5 text-sm">
+                        {analysis.culturalPsychologicalAnalysis.historicalReferences.map((ref, i) => (
+                          <li key={i}>{ref}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.culturalPsychologicalAnalysis.psychologicalImpact && (
+                    <div className="pl-4 border-l-2 border-gray-200">
+                      <h4 className="text-sm font-medium">Psychological Impact:</h4>
+                      <p className="text-sm">{analysis.culturalPsychologicalAnalysis.psychologicalImpact}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Literary & Artistic Analysis */}
+              {analysis.literaryArtisticAnalysis && (
+                <div className="space-y-2">
+                  <AnalysisCategory
+                    title="Literary & Artistic Analysis"
+                    matches={analysis.literaryArtisticAnalysis.matches}
+                    explanation={analysis.literaryArtisticAnalysis.explanation}
+                    score={analysis.literaryArtisticAnalysis.score}
+                  />
+
+                  {analysis.literaryArtisticAnalysis.literaryReferences &&
+                   analysis.literaryArtisticAnalysis.literaryReferences.length > 0 && (
+                    <div className="pl-4 border-l-2 border-gray-200">
+                      <h4 className="text-sm font-medium">Literary References:</h4>
+                      <ul className="list-disc pl-5 text-sm">
+                        {analysis.literaryArtisticAnalysis.literaryReferences.map((ref, i) => (
+                          <li key={i}>{ref}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.literaryArtisticAnalysis.artisticConnections &&
+                   analysis.literaryArtisticAnalysis.artisticConnections.length > 0 && (
+                    <div className="pl-4 border-l-2 border-gray-200">
+                      <h4 className="text-sm font-medium">Artistic Connections:</h4>
+                      <ul className="list-disc pl-5 text-sm">
+                        {analysis.literaryArtisticAnalysis.artisticConnections.map((conn, i) => (
+                          <li key={i}>{conn}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Linguistic Analysis */}
+              {analysis.linguisticAnalysis && (
+                <div className="space-y-2">
+                  <AnalysisCategory
+                    title="Linguistic Analysis"
+                    matches={analysis.linguisticAnalysis.matches}
+                    explanation={analysis.linguisticAnalysis.explanation}
+                    score={analysis.linguisticAnalysis.score}
+                  />
+
+                  {analysis.linguisticAnalysis.phonetics && (
+                    <div className="pl-4 border-l-2 border-gray-200">
+                      <h4 className="text-sm font-medium">Phonetics:</h4>
+                      <p className="text-sm">{analysis.linguisticAnalysis.phonetics}</p>
+                    </div>
+                  )}
+
+                  {analysis.linguisticAnalysis.pronunciationVariations &&
+                   analysis.linguisticAnalysis.pronunciationVariations.length > 0 && (
+                    <div className="pl-4 border-l-2 border-gray-200">
+                      <h4 className="text-sm font-medium">Pronunciation Variations:</h4>
+                      <ul className="list-disc pl-5 text-sm">
+                        {analysis.linguisticAnalysis.pronunciationVariations.map((var_item, i) => (
+                          <li key={i}>{var_item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Chinese Metaphysics Analysis */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">Chinese Metaphysics</h3>
+
+                <AnalysisCategory
+                  title="BaZi Analysis"
+                  matches={analysis.baziAnalysis?.matches || false}
+                  explanation={analysis.baziAnalysis?.explanation || ''}
+                  score={analysis.baziAnalysis?.score}
+                />
+
+                <AnalysisCategory
+                  title="Qi Men Dun Jia Analysis"
+                  matches={analysis.qiMenDunJiaAnalysis?.matches || false}
+                  explanation={analysis.qiMenDunJiaAnalysis?.explanation || ''}
+                  score={analysis.qiMenDunJiaAnalysis?.score}
+                />
+
+                <AnalysisCategory
+                  title="Feng Shui Analysis"
+                  matches={analysis.fengShuiAnalysis?.matches || false}
+                  explanation={analysis.fengShuiAnalysis?.explanation || ''}
+                  score={analysis.fengShuiAnalysis?.score}
+                />
+
+                {/* Five Element Analysis */}
+                {analysis.fiveElementAnalysis && (
+                  <div className="space-y-2">
+                    <AnalysisCategory
+                      title="Five Element Analysis"
+                      matches={analysis.fiveElementAnalysis.matches}
+                      explanation={analysis.fiveElementAnalysis.explanation}
+                      score={analysis.fiveElementAnalysis.score}
+                    />
+
+                    {analysis.fiveElementAnalysis.associatedElement && (
+                      <div className="pl-4 border-l-2 border-gray-200">
+                        <h4 className="text-sm font-medium">Associated Element:</h4>
+                        <p className="text-sm">{analysis.fiveElementAnalysis.associatedElement}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Western Analysis */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">Western Analysis</h3>
+
+                {/* Numerology Analysis */}
+                {analysis.numerologyAnalysis && (
+                  <div className="space-y-2">
+                    <AnalysisCategory
+                      title="Numerology Analysis"
+                      matches={analysis.numerologyAnalysis.matches}
+                      explanation={analysis.numerologyAnalysis.explanation}
+                      score={analysis.numerologyAnalysis.score}
+                    />
+
+                    <div className="pl-4 border-l-2 border-gray-200 grid grid-cols-2 gap-2">
+                      {analysis.numerologyAnalysis.lifePathNumber !== undefined && (
+                        <div>
+                          <h4 className="text-sm font-medium">Life Path Number:</h4>
+                          <p className="text-sm">{analysis.numerologyAnalysis.lifePathNumber}</p>
+                        </div>
+                      )}
+
+                      {analysis.numerologyAnalysis.personalityNumber !== undefined && (
+                        <div>
+                          <h4 className="text-sm font-medium">Personality Number:</h4>
+                          <p className="text-sm">{analysis.numerologyAnalysis.personalityNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Astrology Analysis */}
+                {analysis.astrologyAnalysis && (
+                  <div className="space-y-2">
+                    <AnalysisCategory
+                      title="Astrology Analysis"
+                      matches={analysis.astrologyAnalysis.matches}
+                      explanation={analysis.astrologyAnalysis.explanation}
+                      score={analysis.astrologyAnalysis.score}
+                    />
+
+                    <div className="pl-4 border-l-2 border-gray-200 grid grid-cols-2 gap-2">
+                      {analysis.astrologyAnalysis.associatedZodiac && (
+                        <div>
+                          <h4 className="text-sm font-medium">Associated Zodiac:</h4>
+                          <p className="text-sm">{analysis.astrologyAnalysis.associatedZodiac}</p>
+                        </div>
+                      )}
+
+                      {analysis.astrologyAnalysis.planetaryInfluence && (
+                        <div>
+                          <h4 className="text-sm font-medium">Planetary Influence:</h4>
+                          <p className="text-sm">{analysis.astrologyAnalysis.planetaryInfluence}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-6">
