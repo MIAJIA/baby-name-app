@@ -8,10 +8,7 @@ import { ZodInfer } from "../zod-wrapper";
 // 使用标准 OpenAI 客户端
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
-  baseURL: "https://oai.helicone.ai/v1",
-  defaultHeaders: {
-    "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-  },
+  // Removed Helicone proxy service - directly using OpenAI API
 });
 
 

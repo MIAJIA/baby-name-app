@@ -26,10 +26,7 @@ export type NameMatchAnalysis = ZodInfer<typeof NameMatchAnalysisSchema> & {
 // Initialize the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'sk-your_openai_api_key_here',
-  baseURL: "https://oai.helicone.ai/v1",
-  defaultHeaders: {
-    "Helicone-Auth": process.env.HELICON_API_KEY || ''
-  }
+  // Removed Helicone proxy service - directly using OpenAI API
 });
 
 /**
