@@ -5,6 +5,15 @@ import { useParams } from 'next/navigation';
 import { NameMatchAnalysis } from '@/types/name-analysis';
 import NameDetailCard from '@/components/search/NameDetailCard';
 
+// Define the TrendDataPoint interface locally rather than importing it
+interface TrendDataPoint {
+  year: number;
+  name: string;
+  gender: 'Male' | 'Female';
+  rank: number | null;
+  count: number;
+}
+
 export default function NameDetailPage() {
   const params = useParams();
   const name = params.name as string;
@@ -13,6 +22,7 @@ export default function NameDetailPage() {
   const [analysis, setAnalysis] = useState<NameMatchAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [popularityData, setPopularityData] = useState<TrendDataPoint | null>(null);
 
   useEffect(() => {
     const fetchNameData = async () => {
@@ -40,14 +50,56 @@ export default function NameDetailPage() {
 
         const data = await response.json();
 
-        // Set the actual name data
-        setNameData({
-          name,
-          gender: data.gender || 'Unknown',
-          rank: data.rank || 0,
-          year: data.year || 2023,
-          count: data.count || 0
-        });
+        // Get gender from the analysis data
+        const detectedGender = data.analyses?.[0]?.gender ||
+                              (data.analyses?.[0]?.nameAnalysis?.preferredGender) ||
+                              'Unknown';
+
+        // Fetch popularity data from the new API endpoint
+        try {
+          // Create URL with search parameters
+          const url = new URL('/api/name-popularity', window.location.origin);
+          url.searchParams.append('name', name);
+
+          if (detectedGender !== 'Unknown') {
+            url.searchParams.append('gender', detectedGender);
+          }
+          // Let the API find the most recent data
+          // No longer specifying a year parameter to use the fallback mechanism
+
+          const popResponse = await fetch(url);
+          if (!popResponse.ok) {
+            throw new Error('Failed to fetch popularity data');
+          }
+
+          const popData = await popResponse.json();
+          const popularity = popData.data || [];
+
+          // Use the most relevant data point (first one with a rank)
+          const mostRecent = popularity.find((p: TrendDataPoint) => p.rank !== null) ||
+                            (popularity.length > 0 ? popularity[0] : null);
+
+          setPopularityData(mostRecent);
+
+          // Set the actual name data with popularity information
+          setNameData({
+            name,
+            gender: mostRecent?.gender || detectedGender,
+            rank: mostRecent?.rank || 'Not ranked',
+            year: mostRecent?.year || new Date().getFullYear() - 1,
+            count: mostRecent?.count || 'Not available'
+          });
+        } catch (popError) {
+          console.error('Error fetching popularity data:', popError);
+          // Set default values if popularity data can't be fetched
+          setNameData({
+            name,
+            gender: detectedGender,
+            rank: 'Not ranked',
+            year: new Date().getFullYear() - 1,
+            count: 'Not available'
+          });
+        }
 
         // Set the real analysis with actual translations
         setAnalysis(data.analyses?.[0] || null);
@@ -80,8 +132,8 @@ export default function NameDetailPage() {
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-semibold mb-4">Name Details</h2>
           <p><strong>Gender:</strong> {nameData.gender}</p>
-          <p><strong>Popularity Rank:</strong> #{nameData.rank} in {nameData.year}</p>
-          <p><strong>Number of Babies:</strong> {nameData.count.toLocaleString()}</p>
+          <p><strong>Popularity Rank:</strong> {typeof nameData.rank === 'number' ? `#${nameData.rank} in ${nameData.year}` : nameData.rank}</p>
+          <p><strong>Number of Babies:</strong> {typeof nameData.count === 'number' ? nameData.count.toLocaleString() : nameData.count}</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">

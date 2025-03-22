@@ -18,6 +18,13 @@ interface NameCardProps {
 }
 
 export default function NameCard({ nameData, isFavorite, onToggleFavorite, onViewDetails, searchCriteria }: NameCardProps) {
+  // Helper function to determine badge color based on score
+  const getScoreBadgeColor = (score: number): string => {
+    if (score >= 8) return 'bg-green-100 text-green-800';
+    if (score >= 5) return 'bg-amber-100 text-amber-800';
+    return 'bg-red-100 text-red-800';
+  };
+
   // Add detailed null checks
   if (!nameData || typeof nameData !== 'object') {
     console.error('NameCard received invalid nameData:', nameData);
@@ -187,6 +194,11 @@ export default function NameCard({ nameData, isFavorite, onToggleFavorite, onVie
                         {field === 'fiveElementAnalysis' && 'associatedElement' in analysis && (
                           <span className="ml-1 text-gray-600">({analysis.associatedElement})</span>
                         )}
+                        {'score' in analysis && analysis.score !== undefined && (
+                          <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${getScoreBadgeColor(analysis.score)}`}>
+                            {analysis.score}/10
+                          </span>
+                        )}
                       </div>
                     );
                   }
@@ -214,6 +226,11 @@ export default function NameCard({ nameData, isFavorite, onToggleFavorite, onVie
                         <span className={analysis.matches ? 'text-green-600' : 'text-red-600'}>
                           {analysis.matches ? '✓' : '✗'}
                         </span>
+                        {'score' in analysis && analysis.score !== undefined && (
+                          <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${getScoreBadgeColor(analysis.score)}`}>
+                            {analysis.score}/10
+                          </span>
+                        )}
                       </div>
                     );
                   }
@@ -250,6 +267,11 @@ export default function NameCard({ nameData, isFavorite, onToggleFavorite, onVie
                           {analysis.matches ? '✓' : '✗'}
                         </span>
                         {extraInfo && <span className="ml-1 text-gray-600">{extraInfo}</span>}
+                        {'score' in analysis && analysis.score !== undefined && (
+                          <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${getScoreBadgeColor(analysis.score)}`}>
+                            {analysis.score}/10
+                          </span>
+                        )}
                       </div>
                     );
                   }

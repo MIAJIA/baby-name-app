@@ -58,11 +58,9 @@ export default function Navigation() {
               </Link>
             </div>
           </div>
-          
           <div className="flex items-center space-x-4">
             {/* Language Selector */}
             <LanguageSelector />
-            
             {/* GitHub Link */}
             <Link
               href="https://github.com/miajia/baby-name-app"
@@ -70,7 +68,6 @@ export default function Navigation() {
               rel="noopener noreferrer"
               className="text-gray-700 hover:text-blue-600"
               aria-label={t('githubRepo')}
-            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"

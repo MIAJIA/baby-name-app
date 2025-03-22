@@ -9,7 +9,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, names, gender, meaningTheme, chineseMetaphysics, targetMatches: rawTargetMatches = 10, usePrefiltering = true, prefilterBatchSize = 100 } = body;
+    const {
+      name,
+      names,
+      gender,
+      meaningTheme,
+      chineseMetaphysics,
+      targetMatches: rawTargetMatches = 10,
+      usePrefiltering = true,
+      prefilterBatchSize = 100,
+      chineseTranslation
+    } = body;
 
     // Validate and limit target match count
     const targetMatches = Math.min(Math.max(1, Number(rawTargetMatches) || 10), 50);
@@ -21,6 +31,7 @@ export async function POST(request: NextRequest) {
       gender,
       meaningTheme: meaningTheme || 'not provided',
       chineseMetaphysics: chineseMetaphysics || 'not provided',
+      chineseTranslation: chineseTranslation || 'not provided',
       targetMatches,
       rawTargetMatches,
       usePrefiltering
@@ -34,11 +45,29 @@ export async function POST(request: NextRequest) {
 
       if (cachedResult) {
         console.log(`[${new Date().toISOString()}] Cache hit for name: ${name}`);
+
+        // If user provided a Chinese translation, override the cached one
+        if (chineseTranslation && cachedResult) {
+          console.log(`[${new Date().toISOString()}] User provided Chinese translation: ${chineseTranslation}`);
+          return NextResponse.json({
+            analysis: {
+              ...cachedResult,
+              chineseTranslations: [
+                {
+                  translation: chineseTranslation,
+                  explanation: `User-provided Chinese translation for "${name}".`
+                },
+                ...(cachedResult.chineseTranslations.length > 0 ? [cachedResult.chineseTranslations[0]] : [])
+              ].filter((t, i, arr) => i === 0 || t.translation !== arr[0].translation) // Ensure no duplicates
+            }
+          });
+        }
+
         return NextResponse.json({ analysis: cachedResult });
       }
 
       // Analyze the name
-      const analysis = await analyzeNameMatch(name, gender, meaningTheme || '', chineseMetaphysics || '');
+      const analysis = await analyzeNameMatch(name, gender, meaningTheme || '', chineseMetaphysics || '', chineseTranslation);
 
       // Cache the result
       setCachedAnalysis(name, gender, meaningTheme, chineseMetaphysics, analysis);
@@ -57,11 +86,36 @@ export async function POST(request: NextRequest) {
     const results: NameMatchAnalysis[] = [];
     let namesToAnalyze = [...names];
 
+    // Check if user provided Chinese translations for batch processing
+    const userChineseTranslations = body.chineseTranslations || {};
+    const hasUserTranslations = Object.keys(userChineseTranslations).length > 0;
+
+    if (hasUserTranslations) {
+      console.log(`[${new Date().toISOString()}] Batch request includes ${Object.keys(userChineseTranslations).length} user-provided Chinese translations`);
+    }
+
     // Check cache for batch results
     for (const nameItem of names) {
       const cachedResult = getCachedAnalysis(nameItem, gender, meaningTheme, chineseMetaphysics);
       if (cachedResult) {
-        results.push(cachedResult);
+        // If user provided a translation for this name, override the cached one
+        if (hasUserTranslations && userChineseTranslations[nameItem]) {
+          const userTranslation = userChineseTranslations[nameItem];
+          console.log(`[${new Date().toISOString()}] Using user-provided translation for ${nameItem}: "${userTranslation}"`);
+
+          results.push({
+            ...cachedResult,
+            chineseTranslations: [
+              {
+                translation: userTranslation,
+                explanation: `User-provided Chinese translation for "${nameItem}".`
+              },
+              ...(cachedResult.chineseTranslations.length > 0 ? [cachedResult.chineseTranslations[0]] : [])
+            ].filter((t, i, arr) => i === 0 || t.translation !== arr[0].translation) // Ensure no duplicates
+          });
+        } else {
+          results.push(cachedResult);
+        }
         // Remove from names to analyze
         namesToAnalyze = namesToAnalyze.filter(n => n !== nameItem);
       }
@@ -79,6 +133,19 @@ export async function POST(request: NextRequest) {
       namesToAnalyze = await prefilterNamesByMeaning(names, gender, meaningTheme, prefilterBatchSize);
 
       console.log(`[${new Date().toISOString()}] After prefiltering: ${namesToAnalyze.length} names to analyze`);
+
+      // Make sure we include names with user translations even if they didn't pass prefiltering
+      if (hasUserTranslations) {
+        const translatedNames = Object.keys(userChineseTranslations);
+        const missingTranslatedNames = translatedNames.filter(name =>
+          names.includes(name) && !namesToAnalyze.includes(name)
+        );
+
+        if (missingTranslatedNames.length > 0) {
+          console.log(`[${new Date().toISOString()}] Adding ${missingTranslatedNames.length} names with user translations that were filtered out`);
+          namesToAnalyze = [...new Set([...namesToAnalyze, ...missingTranslatedNames])];
+        }
+      }
     }
 
     console.log(`[${new Date().toISOString()}] After prefiltering process: ${namesToAnalyze.length} names to analyze`);
@@ -109,7 +176,11 @@ export async function POST(request: NextRequest) {
 
       // 并行分析批次中的每个名字
       const batchAnalyses = await Promise.all(
-        batch.map(name => analyzeNameMatch(name, gender, meaningTheme || '', chineseMetaphysics || ''))
+        batch.map(name => {
+          // Use user-provided translation if available
+          const userTranslation = hasUserTranslations ? userChineseTranslations[name] : undefined;
+          return analyzeNameMatch(name, gender, meaningTheme || '', chineseMetaphysics || '', userTranslation);
+        })
       );
 
       // 添加到分析结果
