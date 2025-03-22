@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   const startYearParam = searchParams.get('startYear');
   const endYearParam = searchParams.get('endYear');
   const offsetParam = searchParams.get('offset');
+  const excludeParam = searchParams.get('exclude');
 
   // 记录解析后的参数
   console.log(`[${new Date().toISOString()}] Parsed parameters:`, {
@@ -28,34 +29,51 @@ export async function GET(request: NextRequest) {
     limitParam,
     startYearParam,
     endYearParam,
-    offsetParam
+    offsetParam,
+    excludeParam
   });
 
   const limit = limitParam ? parseInt(limitParam, 10) : 100;
   const startYear = startYearParam ? parseInt(startYearParam, 10) : 2013;
   const endYear = endYearParam ? parseInt(endYearParam, 10) : 2023;
   const offset = offsetParam ? parseInt(offsetParam, 10) : 0;
+  
+  // Parse exclude names if provided
+  let excludeNames: string[] = [];
+  if (excludeParam) {
+    try {
+      excludeNames = JSON.parse(excludeParam);
+      console.log(`[${new Date().toISOString()}] Excluding ${excludeNames.length} names`);
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Failed to parse exclude parameter:`, error);
+    }
+  }
 
   // Validate parameters
   if (!gender || (gender !== 'Male' && gender !== 'Female')) {
     return NextResponse.json({ error: 'Invalid gender parameter' }, { status: 400 });
   }
 
-  console.log(`[${new Date().toISOString()}] Fetching baby names for ${gender}, year range: ${startYear}-${endYear}, limit: ${limit}, offset: ${offset}`);
+  console.log(`[${new Date().toISOString()}] Fetching baby names for ${gender}, year range: ${startYear}-${endYear}, limit: ${limit}, offset: ${offset}, excluding: ${excludeNames.length} names`);
 
   try {
     // 获取指定年份范围内的流行婴儿名字
     // 注意：这里我们请求更多的名字，以确保有足够的名字可以分页
     const allNames = await getPopularBabyNamesFromYearRange(startYear, endYear, 5000, gender);
 
-    // 应用偏移量并限制返回数量
-    const paginatedNames = allNames.slice(offset, offset + limit);
+    // Filter out excluded names if any
+    const filteredNames = excludeNames.length > 0 
+      ? allNames.filter(nameObj => !excludeNames.includes(nameObj.name))
+      : allNames;
 
-    console.log(`[${new Date().toISOString()}] Returning ${paginatedNames.length} names (total available: ${allNames.length})`);
+    // 应用偏移量并限制返回数量
+    const paginatedNames = filteredNames.slice(offset, offset + limit);
+
+    console.log(`[${new Date().toISOString()}] Returning ${paginatedNames.length} names (total available: ${filteredNames.length}, excluded: ${allNames.length - filteredNames.length})`);
 
     return NextResponse.json({
       names: paginatedNames,
-      totalAvailable: allNames.length,
+      totalAvailable: filteredNames.length,
       offset: offset,
       limit: limit,
       yearRange: {
@@ -75,7 +93,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
 
     // Validate required parameters
-    const { gender, count } = body;
+    const { gender, count, offset = 0, exclude = [] } = body;
 
     if (!gender || !['Male', 'Female'].includes(gender)) {
       return NextResponse.json(
@@ -84,17 +102,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[${new Date().toISOString()}] POST request with: gender=${gender}, count=${count}, offset=${offset}, exclude=${exclude.length} names`);
+
     // Use a safe default if count is not provided or invalid
     const safeCount = typeof count === 'number' && count > 0 ? count : 1000;
 
     // Get baby names with proper error handling
-    const names = await getPopularBabyNamesFromYearRange(2013, 2023, safeCount, gender);
+    const allNames = await getPopularBabyNamesFromYearRange(2013, 2023, safeCount * 2, gender);
+    
+    // Filter out excluded names if any
+    const filteredNames = exclude && exclude.length > 0 
+      ? allNames.filter(nameObj => !exclude.includes(nameObj.name))
+      : allNames;
+    
+    // Apply offset and limit
+    const paginatedNames = filteredNames.slice(offset, offset + safeCount);
+    
+    console.log(`[${new Date().toISOString()}] Returning ${paginatedNames.length} names out of ${filteredNames.length} filtered names (excluded ${allNames.length - filteredNames.length})`);
 
     // Return the names
     return NextResponse.json({
-      names: names,
-      totalAvailable: names.length,
-      offset: 0,
+      names: paginatedNames,
+      totalAvailable: filteredNames.length,
+      offset: offset,
       limit: safeCount,
       yearRange: {
         start: 2013,

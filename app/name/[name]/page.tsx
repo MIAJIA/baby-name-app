@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { NameMatchAnalysis } from '@/types/name-analysis';
 import NameDetailCard from '@/components/search/NameDetailCard';
 
@@ -18,16 +17,8 @@ interface TrendDataPoint {
 export default function NameDetailPage() {
   const params = useParams();
   const name = params.name as string;
-  const t = useTranslations('NameDetailPage');
-  const commonT = useTranslations('Common');
 
-  const [nameData, setNameData] = useState<{
-    name: string;
-    gender: string;
-    rank: number | string;
-    year: number;
-    count: number | string;
-  } | null>(null);
+  const [nameData, setNameData] = useState<any>(null);
   const [analysis, setAnalysis] = useState<NameMatchAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +30,7 @@ export default function NameDetailPage() {
         setIsLoading(true);
 
         // Fetch real data from your API
-        const response = await fetch('/api/name-analysis', {
+        const response = await fetch(`/api/name-analysis`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -54,7 +45,7 @@ export default function NameDetailPage() {
         });
 
         if (!response.ok) {
-          throw new Error(t('failedToFetchData'));
+          throw new Error('Failed to fetch name data');
         }
 
         const data = await response.json();
@@ -78,7 +69,7 @@ export default function NameDetailPage() {
 
           const popResponse = await fetch(url);
           if (!popResponse.ok) {
-            throw new Error(t('failedToFetchPopularityData'));
+            throw new Error('Failed to fetch popularity data');
           }
 
           const popData = await popResponse.json();
@@ -94,9 +85,9 @@ export default function NameDetailPage() {
           setNameData({
             name,
             gender: mostRecent?.gender || detectedGender,
-            rank: mostRecent?.rank || t('notRanked'),
+            rank: mostRecent?.rank || 'Not ranked',
             year: mostRecent?.year || new Date().getFullYear() - 1,
-            count: mostRecent?.count || t('notAvailable')
+            count: mostRecent?.count || 'Not available'
           });
         } catch (popError) {
           console.error('Error fetching popularity data:', popError);
@@ -104,16 +95,16 @@ export default function NameDetailPage() {
           setNameData({
             name,
             gender: detectedGender,
-            rank: t('notRanked'),
+            rank: 'Not ranked',
             year: new Date().getFullYear() - 1,
-            count: t('notAvailable')
+            count: 'Not available'
           });
         }
 
         // Set the real analysis with actual translations
         setAnalysis(data.analyses?.[0] || null);
       } catch (err) {
-        setError(t('failedToLoadData'));
+        setError('Failed to load name data');
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -123,14 +114,14 @@ export default function NameDetailPage() {
     if (name) {
       fetchNameData();
     }
-  }, [name, t]);
+  }, [name]);
 
   if (isLoading) {
-    return <div className="container mx-auto p-8">{commonT('loading')}</div>;
+    return <div className="container mx-auto p-8">Loading...</div>;
   }
 
   if (error || !nameData || !analysis) {
-    return <div className="container mx-auto p-8">{t('error')}: {error || t('nameNotFound')}</div>;
+    return <div className="container mx-auto p-8">Error: {error || 'Name not found'}</div>;
   }
 
   return (
@@ -139,17 +130,17 @@ export default function NameDetailPage() {
 
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">{t('nameDetails')}</h2>
-          <p><strong>{t('gender')}:</strong> {nameData.gender}</p>
-          <p><strong>{t('popularityRank')}:</strong> {typeof nameData.rank === 'number' ? t('rankInYear', { rank: nameData.rank, year: nameData.year }) : nameData.rank}</p>
-          <p><strong>{t('numberOfBabies')}:</strong> {typeof nameData.count === 'number' ? nameData.count.toLocaleString() : nameData.count}</p>
+          <h2 className="text-2xl font-semibold mb-4">Name Details</h2>
+          <p><strong>Gender:</strong> {nameData.gender}</p>
+          <p><strong>Popularity Rank:</strong> {typeof nameData.rank === 'number' ? `#${nameData.rank} in ${nameData.year}` : nameData.rank}</p>
+          <p><strong>Number of Babies:</strong> {typeof nameData.count === 'number' ? nameData.count.toLocaleString() : nameData.count}</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">{t('quickSummary')}</h2>
+          <h2 className="text-2xl font-semibold mb-4">Quick Summary</h2>
           <div className="mb-2">
             <span className={`inline-block px-3 py-1 rounded ${analysis.overallMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-              {analysis.overallMatch ? t('recommended') : t('notRecommended')}
+              {analysis.overallMatch ? 'Recommended' : 'Not Recommended'}
             </span>
           </div>
           <p>{analysis.summary}</p>
@@ -160,14 +151,11 @@ export default function NameDetailPage() {
       <NameDetailCard nameAnalysis={analysis} />
 
       <div className="flex space-x-4 mt-6">
-        <button 
-          type="button"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {t('addToFavorites')}
+        <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Add to Favorites
         </button>
         <a href="/search" className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
-          {t('backToSearch')}
+          Back to Search
         </a>
       </div>
     </div>
@@ -183,14 +171,12 @@ function AnalysisCategory({
   matches: boolean;
   explanation: string;
 }) {
-  const t = useTranslations('NameDetailPage');
-  
   return (
     <div className="p-4 border rounded">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-medium">{title}</h3>
         <span className={`inline-block px-2 py-1 rounded text-sm ${matches ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {matches ? t('match') : t('noMatch')}
+          {matches ? 'Match' : 'No Match'}
         </span>
       </div>
       <p className="text-gray-700">{explanation}</p>

@@ -36,7 +36,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     gender: 'Male',
     meaningTheme: 'open and positive',
     chineseMetaphysics: 'tree',
-    targetMatches: 3,
+    targetMatches: 2,
     nameSource: 'ssa',
     usePrefiltering: true
   });
@@ -104,19 +104,6 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
                 id="chineseMetaphysics"
                 value={searchCriteria.chineseMetaphysics}
                 onChange={(e) => setSearchCriteria(prev => ({ ...prev, chineseMetaphysics: e.target.value }))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="targetMatches" className="block mb-2">{t('targetMatches')}</Label>
-              <Input
-                id="targetMatches"
-                type="number"
-                min="1"
-                max="50"
-                value={searchCriteria.targetMatches}
-                onChange={handleTargetMatchesChange}
                 className="w-full"
               />
             </div>

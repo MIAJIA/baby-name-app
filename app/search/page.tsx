@@ -46,6 +46,8 @@ export default function SearchPage() {
   const [matchingNames, setMatchingNames] = useState<NameMatchAnalysis[]>([]);
   const [searchMessage, setSearchMessage] = useState<string | null>(null);
   const [nameSource, setNameSource] = useState<'ssa' | 'popCulture'>('ssa');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreResults, setHasMoreResults] = useState(true);
 
   const stableId = useId();
 
@@ -476,7 +478,8 @@ export default function SearchPage() {
 
                     setResults(prev => {
                       const newResults = [...prev];
-                      matchingNames.forEach((name: NameMatchAnalysis) => {                        if (!newResults.some(n => n.name === name.name)) {
+                      matchingNames.forEach((name: NameMatchAnalysis) => {
+                        if (!newResults.some(n => n.name === name.name)) {
                           newResults.push(name);
                         }
                       });
@@ -531,6 +534,165 @@ export default function SearchPage() {
       cache.clearNameAnalysisCache();
       alert('Cache cleared successfully! Please refresh and search again.');
     });
+  };
+
+  // Add this function to handle loading more results
+  const handleLoadMore = async () => {
+    if (!currentCriteria || isLoadingMore) return;
+    
+    try {
+      setIsLoadingMore(true);
+      console.log(`[${new Date().toISOString()}] Loading more names...`);
+      
+      // Get current names to avoid duplicates
+      const existingNames = matchingNames.map(item => item.name);
+      console.log(`[${new Date().toISOString()}] Existing names: ${existingNames.length}`);
+      
+      // Determine which endpoint to use based on the name source
+      if (currentCriteria.nameSource === 'popCulture') {
+        // Load more pop culture names
+        const response = await fetch(`/api/pop-culture-names?gender=${currentCriteria.gender}&skip=${matchingNames.length}&limit=10&exclude=${encodeURIComponent(JSON.stringify(existingNames))}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch more pop culture names: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const newNames = data.names || [];
+        
+        if (newNames.length === 0) {
+          // Always keep the button visible
+          // setHasMoreResults(false);
+          return;
+        }
+        
+        console.log(`[${new Date().toISOString()}] Got ${newNames.length} new pop culture names`);
+        
+        const analysisResponse = await fetch('/api/name-analysis', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            names: newNames,
+            gender: currentCriteria.gender,
+            meaningTheme: currentCriteria.meaningTheme || '',
+            chineseMetaphysics: currentCriteria.chineseMetaphysics || '',
+            targetMatches: 3,
+            usePrefiltering: currentCriteria.usePrefiltering
+          }),
+        });
+        
+        if (!analysisResponse.ok) {
+          throw new Error(`Failed to analyze more names: ${JSON.stringify(analysisResponse, null, 2)}`);
+        }
+        
+        const analysisData = await analysisResponse.json();
+        const newAnalyses = (analysisData.analyses || []).filter((analysis: NameMatchAnalysis | null | undefined) => 
+          analysis !== null && 
+          analysis !== undefined && 
+          typeof analysis === 'object' && 
+          'name' in analysis
+        );
+        
+        if (newAnalyses.length === 0) {
+          // Always keep the button visible
+          // setHasMoreResults(false);
+          return;
+        }
+        
+        // Add new analyses to existing ones
+        setMatchingNames(prev => [...prev, ...newAnalyses]);
+        
+        return;
+      }
+      
+      // Load more SSA names
+      const response = await fetch('/api/baby-names', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gender: currentCriteria.gender,
+          count: 50, // Fetch more names to have better chances of finding unique ones
+          offset: totalProcessed, // Skip already processed names
+          exclude: existingNames // Pass existing names to avoid duplicates
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch more names: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const newNames = data.names || [];
+      
+      if (newNames.length === 0) {
+        // Always keep the button visible
+        // setHasMoreResults(false);
+        return;
+      }
+      
+      console.log(`[${new Date().toISOString()}] Got ${newNames.length} new SSA names`);
+      
+      // Extract name strings
+      const namesToAnalyze = newNames.map((nameObj: BabyName) => nameObj.name);
+      
+      const analysisResponse = await fetch('/api/name-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          names: namesToAnalyze,
+          gender: currentCriteria.gender,
+          meaningTheme: currentCriteria.meaningTheme || '',
+          chineseMetaphysics: currentCriteria.chineseMetaphysics || '',
+          targetMatches: 3,
+          usePrefiltering: currentCriteria.usePrefiltering
+        }),
+      });
+      
+      if (!analysisResponse.ok) {
+        throw new Error(`Failed to analyze more names: ${JSON.stringify(analysisResponse, null, 2)}`);
+      }
+      
+      const analysisData = await analysisResponse.json();
+      const newAnalyses = analysisData.analyses || [];
+      
+      if (newAnalyses.length === 0) {
+        // Always keep the button visible
+        // setHasMoreResults(false);
+        return;
+      }
+      
+      // Update processed counts
+      setTotalProcessed(prev => prev + namesToAnalyze.length);
+      setMatchesFound(prev => prev + newAnalyses.length);
+      
+      // Add new analyses to existing ones, avoiding duplicates
+      setMatchingNames(prev => {
+        const prevNames = prev.map(item => item.name);
+        const uniqueNewAnalyses = newAnalyses.filter(
+          (item: NameMatchAnalysis) => !prevNames.includes(item.name)
+        );
+        
+        console.log(`[${new Date().toISOString()}] Found ${uniqueNewAnalyses.length} unique new names out of ${newAnalyses.length}`);
+        
+        if (uniqueNewAnalyses.length === 0) {
+          // Always keep the button visible
+          // setHasMoreResults(false);
+        }
+        
+        return [...prev, ...uniqueNewAnalyses];
+      });
+    } catch (error) {
+      console.error('Error loading more names:', error);
+      setError(`Failed to load more names: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   return (
@@ -669,6 +831,9 @@ export default function SearchPage() {
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
           onViewDetails={viewNameDetails}
+          onLoadMore={handleLoadMore}
+          isLoadingMore={isLoadingMore}
+          hasMoreResults={hasMoreResults}
         />
       )}
 

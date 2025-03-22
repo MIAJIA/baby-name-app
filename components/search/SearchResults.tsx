@@ -3,6 +3,7 @@ import type { NameMatchAnalysis } from '@/types/name-analysis';
 import NameCard from '@/components/name-details/NameCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface SearchResultsProps {
   matchingNames: NameMatchAnalysis[];
@@ -12,6 +13,9 @@ interface SearchResultsProps {
   favorites?: string[];
   onToggleFavorite?: (name: string) => void;
   onViewDetails?: (name: string) => void;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
+  hasMoreResults?: boolean;
 }
 
 export default function SearchResults({
@@ -21,7 +25,10 @@ export default function SearchResults({
   error,
   favorites = [],
   onToggleFavorite = () => {},
-  onViewDetails = () => {}
+  onViewDetails = () => {},
+  onLoadMore = () => {},
+  isLoadingMore = false,
+  hasMoreResults = true
 }: SearchResultsProps) {
   const t = useTranslations('SearchPage');
   const commonT = useTranslations('Common');
@@ -80,37 +87,56 @@ export default function SearchResults({
       )}
 
       {!isLoading && validNames.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {validNames.map((name, index) => {
-            console.log(`Rendering name at index ${index}:`, name ? name.name : 'undefined');
-            const isFavorited = favorites.includes(name.name);
-            console.log(`🔄 NameCard ${name.name} isFavorite:`, isFavorited);
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {validNames.map((name, index) => {
+              console.log(`Rendering name at index ${index}:`, name ? name.name : 'undefined');
+              const isFavorited = favorites.includes(name.name);
+              console.log(`🔄 NameCard ${name.name} isFavorite:`, isFavorited);
 
-            console.log('🔍 Rendering NameCard for', name.name);
-            console.log('🔍 isFavorited value:', isFavorited);
-            console.log('🔍 favorites array:', favorites);
-            console.log('🔍 onToggleFavorite defined?', !!onToggleFavorite);
+              console.log('🔍 Rendering NameCard for', name.name);
+              console.log('🔍 isFavorited value:', isFavorited);
+              console.log('🔍 favorites array:', favorites);
+              console.log('🔍 onToggleFavorite defined?', !!onToggleFavorite);
 
-            return name && typeof name === 'object' ? (
-              <div key={`namecard-${name.name}-${index}`} className="relative">
-                {isFavorited && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <Heart className="h-5 w-5 fill-red-500 text-red-500" />
-                  </div>
-                )}
-                <NameCard
-                  nameData={name}
-                  isFavorite={isFavorited}
-                  onToggleFavorite={(name) => {
-                    console.log('🔍 onToggleFavorite called from SearchResults for:', name);
-                    onToggleFavorite(name);
-                  }}
-                  onViewDetails={onViewDetails}
-                />
-              </div>
-            ) : null;
-          })}
-        </div>
+              return name && typeof name === 'object' ? (
+                <div key={`name-${name.name}-${index}`} className="relative">
+                  {isFavorited && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <Heart className="h-5 w-5 fill-red-500 text-red-500" />
+                    </div>
+                  )}
+                  <NameCard
+                    nameData={name}
+                    isFavorite={isFavorited}
+                    onToggleFavorite={(name) => {
+                      console.log('🔍 onToggleFavorite called from SearchResults for:', name);
+                      onToggleFavorite(name);
+                    }}
+                    onViewDetails={onViewDetails}
+                  />
+                </div>
+              ) : null;
+            })}
+          </div>
+          
+          <div className="flex justify-center mt-6">
+            <Button 
+              onClick={onLoadMore} 
+              disabled={isLoadingMore}
+              className="px-6"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {t('loadingMore')}
+                </>
+              ) : (
+                t('loadMore')
+              )}
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
