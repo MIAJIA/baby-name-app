@@ -18,6 +18,16 @@ const openai = new OpenAI({
 let analysisCounter = 0;
 
 /**
+ * Helper function to log API call timing
+ */
+function logApiTiming(functionName: string, startTime: number, description: string = ''): void {
+  const endTime = performance.now();
+  const duration = ((endTime - startTime) / 1000).toFixed(2);
+  const descText = description ? ` - ${description}` : '';
+  console.log(`[${new Date().toISOString()}] [API Timing] ${functionName}${descText}: ${duration}s`);
+}
+
+/**
  * 分析名字是否符合用户标准
  */
 export async function analyzeNameMatch(
@@ -47,6 +57,7 @@ export async function analyzeNameMatch(
 
     try {
       // Use the standard API without response_format for GPT-4
+      const apiCallStart = performance.now();
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -128,6 +139,7 @@ export async function analyzeNameMatch(
         ],
         temperature: 0.7,
       });
+      logApiTiming('analyzeNameMatch', apiCallStart, name);
 
       console.log('API call successful!');
       console.log('Response status:', completion.choices[0].finish_reason);
@@ -299,6 +311,7 @@ export async function prefilterNamesByMeaning(
 
   try {
     // 使用 OpenAI API 进行批量预过滤
+    const apiCallStart = performance.now();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -321,6 +334,7 @@ export async function prefilterNamesByMeaning(
       temperature: 0.7,
       max_tokens: 2000
     });
+    logApiTiming('prefilterNamesByMeaning', apiCallStart, `Filtered ${names.length} names`);
 
     const response = completion.choices[0].message.content;
 
@@ -371,7 +385,9 @@ export async function analyzeNamesBatchApi(
   console.log(`[${new Date().toISOString()}] [Batch API] Analyzing ${names.length} names in a single API call`);
   console.log(`[${new Date().toISOString()}] [Batch API] Names: ${names.join(', ')}`);
 
+  const apiStartTime = performance.now();
   try {
+    const apiCallStart = performance.now();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -418,6 +434,7 @@ export async function analyzeNamesBatchApi(
       temperature: 0.7,
       max_tokens: 4000,
     });
+    logApiTiming('analyzeNamesBatchApi', apiCallStart, `Batch of ${names.length} names`);
 
     // 解析响应
     const responseContent = completion.choices[0].message.content;
@@ -462,7 +479,7 @@ export async function analyzeNamesBatchApi(
         nameAnalyses.push(finalAnalysis);
       }
 
-      console.log(`[${new Date().toISOString()}] [Batch API] Successfully analyzed ${nameAnalyses.length} names in a single API call`);
+      console.log(`[${new Date().toISOString()}] [Batch API] Successfully analyzed ${nameAnalyses.length} names in a single API call in ${((performance.now() - apiStartTime) / 1000).toFixed(2)}s`);
       return nameAnalyses;
 
     } catch (parseError) {
@@ -471,6 +488,8 @@ export async function analyzeNamesBatchApi(
     }
   } catch (error) {
     console.error(`[${new Date().toISOString()}] [Batch API] Error making batch request:`, error);
+    const duration = ((performance.now() - apiStartTime) / 1000).toFixed(2);
+    console.log(`[${new Date().toISOString()}] [API Timing] analyzeNamesBatchApi failed after ${duration}s`);
 
     // 生成默认分析结果
     return names.map(name => createDefaultAnalysis(
@@ -672,16 +691,32 @@ export async function batchAnalyzeNamesWithPrefiltering(
   targetMatches?: number,
   usePrefiltering = true
 ): Promise<NameMatchAnalysis[]> {
+  const totalStartTime = performance.now();
   console.log(`[${new Date().toISOString()}] Starting batch analysis with${usePrefiltering ? '' : 'out'} prefiltering for ${names.length} names`);
 
   // 如果启用预过滤，先进行预过滤
   let namesToAnalyze = names;
+  let prefilterTime = 0;
+
   if (usePrefiltering && names.length > 20) {
+    const prefilterStartTime = performance.now();
     namesToAnalyze = await prefilterNamesByMeaning(names, gender, meaningTheme);
+    prefilterTime = performance.now() - prefilterStartTime;
+    console.log(`[${new Date().toISOString()}] [API Timing] Prefiltering step: ${(prefilterTime / 1000).toFixed(2)}s (reduced from ${names.length} to ${namesToAnalyze.length} names)`);
   }
 
   // 然后进行详细分析
-  return batchAnalyzeNames(namesToAnalyze, gender, meaningTheme, chineseMetaphysics, batchSize, targetMatches);
+  const analysisStartTime = performance.now();
+  const results = await batchAnalyzeNames(namesToAnalyze, gender, meaningTheme, chineseMetaphysics, batchSize, targetMatches);
+  const analysisTime = performance.now() - analysisStartTime;
+
+  const totalTime = performance.now() - totalStartTime;
+  console.log(`[${new Date().toISOString()}] [API Timing] Complete analysis pipeline: ${(totalTime / 1000).toFixed(2)}s total`);
+  console.log(`[${new Date().toISOString()}] [API Timing] --- Prefiltering: ${(prefilterTime / 1000).toFixed(2)}s (${(prefilterTime/totalTime*100).toFixed(1)}%)`);
+  console.log(`[${new Date().toISOString()}] [API Timing] --- Detailed analysis: ${(analysisTime / 1000).toFixed(2)}s (${(analysisTime/totalTime*100).toFixed(1)}%)`);
+  console.log(`[${new Date().toISOString()}] [API Timing] --- Average time per result: ${(totalTime / results.length / 1000).toFixed(2)}s`);
+
+  return results;
 }
 
 /**
