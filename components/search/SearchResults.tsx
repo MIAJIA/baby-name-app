@@ -1,5 +1,5 @@
-import React from 'react';
-import { NameMatchAnalysis } from '@/types/name-analysis';
+import { useTranslations } from 'next-intl';
+import type { NameMatchAnalysis } from '@/types/name-analysis';
 import NameCard from '@/components/name-details/NameCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Heart } from 'lucide-react';
@@ -23,6 +23,9 @@ export default function SearchResults({
   onToggleFavorite = () => {},
   onViewDetails = () => {}
 }: SearchResultsProps) {
+  const t = useTranslations('SearchPage');
+  const commonT = useTranslations('Common');
+
   // 添加更详细的调试日志
   console.log('SearchResults component received:', {
     matchingNamesCount: matchingNames?.length || 0,
@@ -55,12 +58,12 @@ export default function SearchResults({
 
   return (
     <div className="mt-8">
-      <h2 className="text-2xl font-semibold mb-4">Search Results</h2>
+      <h2 className="text-2xl font-semibold mb-4">{t('searchResults')}</h2>
 
       {isLoading && (
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-          <span>Searching for names...</span>
+          <span>{t('searchingMessage')}</span>
         </div>
       )}
 
@@ -72,7 +75,7 @@ export default function SearchResults({
 
       {!isLoading && !error && validNames.length === 0 && (
         <p className="text-center p-8 border rounded-lg bg-muted">
-          No matching names found. Try adjusting your search criteria.
+          {t('noResults')}
         </p>
       )}
 

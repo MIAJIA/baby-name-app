@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Navigation from '@/components/Navigation';
 import ClientWrapper from '@/components/layout/ClientWrapper';
+import NextIntlProvider from '@/components/NextIntlProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,12 +20,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <Navigation />
-        <main className="container mx-auto py-8 px-4">
-          <ClientWrapper>
-            {children}
-          </ClientWrapper>
-        </main>
+        <NextIntlProvider>
+          <Navigation />
+          <main className="container mx-auto py-8 px-4">
+            <ClientWrapper>
+              {children}
+            </ClientWrapper>
+          </main>
+        </NextIntlProvider>
       </body>
     </html>
   );

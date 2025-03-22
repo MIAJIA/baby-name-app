@@ -1,0 +1,69 @@
+{
+  "Navigation": {
+    "appName": "宝宝起名应用",
+    "search": "搜索",
+    "analyzeName": "分析名字",
+    "favorites": "收藏",
+    "githubRepo": "GitHub 仓库",
+    "openMainMenu": "打开主菜单"
+  },
+  "LanguageSelector": {
+    "language": "语言",
+    "english": "English",
+    "chinese": "中文",
+    "spanish": "Español"
+  },
+  "HomePage": {
+    "title": "宝宝起名应用",
+    "subtitle": "通过含义和分析找到完美的宝宝名字",
+    "redirecting": "正在重定向到搜索页面..."
+  },
+  "SearchPage": {
+    "searchResults": "搜索结果",
+    "noResults": "未找到结果。请尝试不同的搜索条件。",
+    "searchingMessage": "搜索中...",
+    "matchesFound": "找到 {{count}} 个匹配的名字",
+    "namesProcessed": "已处理 {{count}} 个名字",
+    "searchDuration": "搜索耗时 {{duration}} 秒",
+    "clearResults": "清除结果",
+    "viewFavorites": "查看收藏",
+    "addToFavorites": "添加到收藏",
+    "removeFromFavorites": "从收藏中移除",
+    "viewDetails": "查看详情",
+    "error": "错误",
+    "searchError": "搜索过程中发生错误。请再试一次。",
+    "findYourPerfectBabyName": "为您的宝宝找到完美名字",
+    "searchingForNames": "正在搜索名字...",
+    "namesProcessedLabel": "已处理名字：",
+    "matchesFoundLabel": "找到匹配：",
+    "matchesSoFar": "目前匹配",
+    "eachNameAnalyzed": "每个名字都会根据含义、来源及与您的标准的兼容性进行分析。",
+    "searchInProgress": "搜索进行了",
+    "searchLongerMessage": "这次搜索比平常耗时更长。您可以继续等待或尝试减少名字数量。",
+    "cancelSearch": "取消搜索",
+    "preliminaryResults": "初步结果 ",
+    "namesInfoMessage": "要寻找的名字数量：这是您希望找到的匹配名字数量，而不是要搜索的名字总数。更高的数字将需要更长的处理时间。",
+    "viewAllFavorites": "查看所有收藏",
+    "clearCache": "清除缓存",
+    "clearing": "清除中..."
+  },
+  "SearchForm": {
+    "gender": "性别",
+    "male": "男孩",
+    "female": "女孩",
+    "meaningTheme": "含义主题",
+    "meaningThemePlaceholder": "例如：力量、智慧、自然",
+    "chineseElement": "五行偏好",
+    "targetMatches": "结果数量",
+    "nameSource": "名字来源",
+    "usePrefiltering": "使用智能预过滤",
+    "search": "搜索名字"
+  },
+  "NameSourceSelector": {
+    "ssaDatabase": "美国社安局数据库",
+    "popCulture": "流行文化名字"
+  },
+  "Common": {
+    "loading": "加载中..."
+  }
+} 
