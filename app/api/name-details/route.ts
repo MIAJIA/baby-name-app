@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
           return await analyzeNameMatch(
             name,
-            gender,
+            gender as 'Male' | 'Female',
             meaningTheme,
             chineseMetaphysics
           );
@@ -77,6 +77,47 @@ export async function POST(request: NextRequest) {
             qiMenDunJiaAnalysis: { matches: false, explanation: 'Details unavailable' },
             fengShuiAnalysis: { matches: false, explanation: 'Details unavailable' },
             nameAnalysis: { matches: false, explanation: 'Details unavailable' },
+            origin: "Unknown (error occurred)",
+            meaning: "Unknown (error occurred)",
+            culturalPsychologicalAnalysis: {
+              matches: false,
+              explanation: 'Details unavailable',
+              historicalReferences: [],
+              psychologicalImpact: "Unknown due to error"
+            },
+            literaryArtisticAnalysis: {
+              matches: false,
+              explanation: 'Details unavailable',
+              literaryReferences: [],
+              artisticConnections: []
+            },
+            linguisticAnalysis: {
+              matches: false,
+              explanation: 'Details unavailable',
+              phonetics: "",
+              pronunciationVariations: []
+            },
+            fiveElementAnalysis: {
+              matches: false,
+              explanation: 'Details unavailable',
+              associatedElement: "Unknown"
+            },
+            numerologyAnalysis: {
+              matches: false,
+              explanation: 'Details unavailable',
+              lifePathNumber: 0,
+              personalityNumber: 0
+            },
+            astrologyAnalysis: {
+              matches: false,
+              explanation: 'Details unavailable',
+              associatedZodiac: "Unknown",
+              planetaryInfluence: "Unknown"
+            },
+            meaningMatchScore: 0,
+            meaningMatchReason: 'Details unavailable',
+            chineseMetaphysicsScore: 0,
+            chineseMetaphysicsReason: 'Details unavailable'
           };
         }
       })

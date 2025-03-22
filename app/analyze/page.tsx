@@ -247,20 +247,20 @@ export default function AnalyzePage() {
 
               <AnalysisCategory
                 title="BaZi Analysis"
-                matches={analysis.baziAnalysis.matches}
-                explanation={analysis.baziAnalysis.explanation}
+                matches={analysis.baziAnalysis?.matches || false}
+                explanation={analysis.baziAnalysis?.explanation || ''}
               />
 
               <AnalysisCategory
                 title="Qi Men Dun Jia Analysis"
-                matches={analysis.qiMenDunJiaAnalysis.matches}
-                explanation={analysis.qiMenDunJiaAnalysis.explanation}
+                matches={analysis.qiMenDunJiaAnalysis?.matches || false}
+                explanation={analysis.qiMenDunJiaAnalysis?.explanation || ''}
               />
 
               <AnalysisCategory
                 title="Feng Shui Analysis"
-                matches={analysis.fengShuiAnalysis.matches}
-                explanation={analysis.fengShuiAnalysis.explanation}
+                matches={analysis.fengShuiAnalysis?.matches || false}
+                explanation={analysis.fengShuiAnalysis?.explanation || ''}
               />
 
               <AnalysisCategory
