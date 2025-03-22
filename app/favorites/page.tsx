@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Heart, ArrowLeft, Trash2 } from 'lucide-react';
 import { getFromLocalStorage, saveToLocalStorage } from '@/lib/utils';
@@ -13,6 +14,9 @@ import { FavoriteNameItem } from '@/types';
 
 export default function FavoritesPage() {
   const router = useRouter();
+  const t = useTranslations('FavoritesPage');
+  const commonT = useTranslations('Common');
+  
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteDetails, setFavoriteDetails] = useState<NameMatchAnalysis[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FavoriteNameItem[]>([]);
@@ -43,66 +47,63 @@ export default function FavoritesPage() {
           },
           body: JSON.stringify({
             names: savedNames,
-            favoriteItems: savedItems // 传递包含完整搜索条件的收藏项
+            items: savedItems,
           }),
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch name details: ${response.statusText}`);
+          throw new Error(t('failedToFetchFavorites'));
         }
 
         const data = await response.json();
         setFavoriteDetails(data.details || []);
       } catch (err) {
         console.error('Error fetching favorite details:', err);
-        setError(`Failed to load favorite details: ${(err as Error).message}`);
+        setError(t('errorFetchingFavorites'));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchNameDetails();
-  }, []);
+  }, [t]);
 
   const removeFavorite = (id: string, name?: string) => {
-    if (!id && !name) return;
+    if (!name && !id) return;
 
-    if (id) {
-      // 使用ID移除特定收藏项
-      console.log('🔍 Removing favorite by ID:', id);
-      const newFavoriteItems = favoriteItems.filter(item => item.id !== id);
-      setFavoriteItems(newFavoriteItems);
-      saveToLocalStorage('favoriteNameDetails', newFavoriteItems);
+    try {
+      let updatedFavorites = [...favorites];
 
-      // 从详细数据中移除对应的项
-      const itemToRemove = favoriteItems.find(item => item.id === id);
-      if (itemToRemove) {
-        setFavoriteDetails(prev => prev.filter(detail =>
-          !(detail.name === itemToRemove.name &&
-            favoriteItems.findIndex(i =>
-              i.name === detail.name && i.id !== id
-            ) === -1)
-        ));
+      // 如果提供了名称，则从名称列表中删除
+      if (name) {
+        updatedFavorites = updatedFavorites.filter(
+          (favName) => favName !== name
+        );
+        setFavorites(updatedFavorites);
+        saveToLocalStorage('favoriteNames', updatedFavorites);
       }
 
-      // 更新简单名字列表（去重）
-      const uniqueNames = Array.from(new Set(newFavoriteItems.map(item => item.name)));
-      setFavorites(uniqueNames);
-      saveToLocalStorage('favoriteNames', uniqueNames);
-    } else if (name) {
-      // 向后兼容：使用名字移除所有匹配项
-      console.log('🔍 Removing all favorites with name:', name);
-      const newFavoriteItems = favoriteItems.filter(item => item.name !== name);
-      setFavoriteItems(newFavoriteItems);
-      saveToLocalStorage('favoriteNameDetails', newFavoriteItems);
+      // 始终从详细项目中删除（使用ID）
+      const updatedItems = favoriteItems.filter((item) => 
+        // 如果提供了ID，则使用ID过滤
+        (id && item.id !== id) || 
+        // 如果只提供了名称，则使用名称过滤
+        (name && !id && item.name !== name)
+      );
+      setFavoriteItems(updatedItems);
+      saveToLocalStorage('favoriteNameDetails', updatedItems);
 
-      // 从详细数据中移除
-      setFavoriteDetails(prev => prev.filter(detail => detail.name !== name));
+      // 从详细结果中删除
+      const updatedDetails = favoriteDetails.filter(
+        (detail) => (name ? detail.name !== name : true)
+      );
+      setFavoriteDetails(updatedDetails);
 
-      // 更新简单名字列表
-      const newFavorites = favorites.filter(n => n !== name);
-      setFavorites(newFavorites);
-      saveToLocalStorage('favoriteNames', newFavorites);
+      // 可选：显示确认通知
+      // alert(`${name || id} has been removed from your favorites.`);
+    } catch (err) {
+      console.error('Error removing favorite:', err);
+      setError(t('errorRemovingFavorite'));
     }
   };
 
@@ -111,147 +112,97 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="container max-w-5xl mx-auto pt-8 pb-16 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Your Favorite Names</h1>
+    <div className="container mx-auto p-4 max-w-7xl">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold flex items-center">
+          <Heart className="h-8 w-8 mr-2 fill-red-500 text-red-500" />
+          {t('myFavorites')}
+        </h1>
         <Button
           variant="outline"
+          className="flex items-center"
           onClick={() => router.push('/search')}
-          className="flex items-center gap-2"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Search
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {t('backToSearch')}
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center p-16">
+      {isLoading && (
+        <div className="flex items-center justify-center p-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-          <span>Loading your favorites...</span>
+          <p>{commonT('loading')}</p>
         </div>
-      ) : error ? (
-        <Alert variant="destructive" className="mb-8">
+      )}
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      ) : favorites.length === 0 ? (
-        <div className="text-center py-16 border rounded-lg bg-muted">
-          <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-semibold mb-2">No Favorite Names Yet</h2>
-          <p className="text-muted-foreground mb-6">
-            Save names you like from the search results to see them here.
-          </p>
+      )}
+
+      {!isLoading && favorites.length === 0 && (
+        <div className="text-center p-12 border rounded-lg bg-muted">
+          <p className="text-xl font-medium mb-4">{t('noFavoritesYet')}</p>
+          <p className="mb-6">{t('exploreAndAddFavorites')}</p>
           <Button onClick={() => router.push('/search')}>
-            Search for Names
+            {t('startExploring')}
           </Button>
         </div>
-      ) : (
+      )}
+
+      {!isLoading && favorites.length > 0 && (
         <>
-          <p className="mb-6 text-muted-foreground">
-            You have {favorites.length} favorite {favorites.length === 1 ? 'name' : 'names'}.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favoriteDetails.map((detail, index) => {
-              // 查找对应的收藏项并记录日志
-              const matchingItem = favoriteItems.find(i => i.name === detail.name);
-              console.log(`🔍 Found item for ${detail.name}:`, matchingItem);
-
-              const item = matchingItem || {
-                id: `${detail.name}-${Date.now()}`,
-                name: detail.name,
-                gender: 'Male',
-                meaningTheme: '',
-                chineseMetaphysics: '',
-                timestamp: Date.now()
-              };
-
-              console.log(`🔍 Using item for ${detail.name}:`, item);
-
-              // 查找所有匹配这个名字的收藏项
-              const allItemsForName = favoriteItems.filter(i => i.name === detail.name);
-              console.log(`🔍 All items for ${detail.name}:`, allItemsForName);
-
-              return (
-                <div key={item.id || `${detail.name}-${index}`} className="relative">
-                  {/* 在渲染前记录完整的搜索条件信息 */}
-                  {(() => {
-                    console.log(`🔍 渲染 ${detail.name} 的搜索条件:`, {
-                      id: item.id,
-                      gender: item.gender,
-                      meaningTheme: item.meaningTheme || '未指定',
-                      chineseMetaphysics: item.chineseMetaphysics || '未指定',
-                      searchCriteriaObject: {
-                        gender: item.gender as 'Male' | 'Female',
-                        meaningTheme: item.meaningTheme || '未指定',
-                        chineseMetaphysics: item.chineseMetaphysics || '未指定'
-                      }
-                    });
-                    return null;
-                  })()}
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 z-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100"
-                    onClick={() => removeFavorite(item.id, detail.name)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <NameCard
-                    nameData={detail}
-                    isFavorite={true}
-                    onToggleFavorite={() => removeFavorite(item.id, detail.name)}
-                    onViewDetails={viewNameDetails}
-                    searchCriteria={{
-                      gender: item.gender as 'Male' | 'Female',
-                      meaningTheme: item.meaningTheme || '未指定', // 确保为空时显示占位符
-                      chineseMetaphysics: item.chineseMetaphysics || '未指定'
-                    }}
-                  />
-
-                  {/* 如果有多个收藏项，显示其他搜索条件 */}
-                  {allItemsForName.length > 1 && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded-md text-xs">
-                      <p className="font-medium text-gray-700">也以这些条件收藏:</p>
-                      {allItemsForName.filter(i => i.id !== item.id).map((otherItem) => (
-                        <div key={otherItem.id} className="mt-1 flex justify-between items-center">
-                          <div className="flex flex-col">
-                            <span className="text-gray-600">性别: {otherItem.gender || '未指定'}</span>
-                            <span className="text-gray-600">主题: {otherItem.meaningTheme || '未指定'}</span>
-                            <span className="text-gray-600">玄学: {otherItem.chineseMetaphysics || '未指定'}</span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-red-500 hover:text-red-700"
-                            onClick={() => removeFavorite(otherItem.id)}
-                          >
-                            移除
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-8 mb-4">
+          <div className="flex justify-end mb-4">
             <Button
               variant="outline"
-              size="sm"
+              className="flex items-center text-red-600 border-red-200 hover:bg-red-50"
               onClick={() => {
-                console.log('🔍 当前localStorage中的favoriteNameDetails:',
-                  getFromLocalStorage<FavoriteNameItem[]>('favoriteNameDetails', []));
-                console.log('🔍 当前localStorage中的favoriteNames:',
-                  getFromLocalStorage<string[]>('favoriteNames', []));
-                console.log('🔍 当前组件状态 favoriteItems:', favoriteItems);
-                console.log('🔍 当前组件状态 favoriteDetails:', favoriteDetails);
+                if (window.confirm(t('confirmRemoveAllFavorites'))) {
+                  setFavorites([]);
+                  setFavoriteItems([]);
+                  setFavoriteDetails([]);
+                  saveToLocalStorage('favoriteNames', []);
+                  saveToLocalStorage('favoriteNameDetails', []);
+                }
               }}
             >
-              调试收藏数据
+              <Trash2 className="h-4 w-4 mr-2" />
+              {t('removeAllFavorites')}
             </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {favoriteDetails.map((nameData) => (
+              <div key={nameData.name} className="relative">
+                <div className="absolute top-2 right-2 z-10">
+                  <button
+                    type="button"
+                    className="p-1 rounded-full bg-white shadow-sm hover:bg-red-50"
+                    onClick={() => {
+                      // 查找具有此名称的项目的ID
+                      const itemWithName = favoriteItems.find(item => item.name === nameData.name);
+                      const itemId = itemWithName?.id || '';
+                      removeFavorite(itemId, nameData.name);
+                    }}
+                    aria-label={t('removeFavorite')}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </button>
+                </div>
+                <NameCard
+                  nameData={nameData}
+                  isFavorite={true}
+                  onToggleFavorite={() => {
+                    // 查找具有此名称的项目的ID
+                    const itemWithName = favoriteItems.find(item => item.name === nameData.name);
+                    const itemId = itemWithName?.id || '';
+                    removeFavorite(itemId, nameData.name);
+                  }}
+                  onViewDetails={viewNameDetails}
+                />
+              </div>
+            ))}
           </div>
         </>
       )}

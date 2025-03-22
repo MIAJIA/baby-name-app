@@ -92,7 +92,7 @@ export default function SearchResults({
             console.log('🔍 onToggleFavorite defined?', !!onToggleFavorite);
 
             return name && typeof name === 'object' ? (
-              <div key={`name-${name.name}-${index}`} className="relative">
+              <div key={`namecard-${name.name}-${index}`} className="relative">
                 {isFavorited && (
                   <div className="absolute top-2 right-2 z-10">
                     <Heart className="h-5 w-5 fill-red-500 text-red-500" />
