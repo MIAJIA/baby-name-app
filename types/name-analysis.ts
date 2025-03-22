@@ -23,11 +23,13 @@ export interface NameMatchAnalysis {
   characterAnalysis: {
     matches: boolean;
     explanation: string;
+    score?: number;
   };
 
   nameAnalysis: {
     matches: boolean;
     explanation: string;
+    score?: number;
   };
 
   // **2️⃣ 文化象征 & 心理学**
@@ -36,6 +38,7 @@ export interface NameMatchAnalysis {
     historicalReferences?: string[]; // 例如: ["Benjamin Franklin", "Biblical Benjamin"]
     psychologicalImpact?: string; // 例如: "This name is often associated with leadership and reliability."
     explanation: string;
+    score?: number;
   };
 
   // **3️⃣ 文学 & 艺术**
@@ -44,6 +47,7 @@ export interface NameMatchAnalysis {
     literaryReferences?: string[]; // 例如: ["The Curious Case of Benjamin Button"]
     artisticConnections?: string[]; // 例如: ["Benjamin Britten, English composer"]
     explanation: string;
+    score?: number;
   };
 
   // **4️⃣ 语言学 & 语音分析**
@@ -52,6 +56,7 @@ export interface NameMatchAnalysis {
     phonetics?: string; // 例如: "ben-ja-min"
     pronunciationVariations?: string[]; // 例如: ["French: [bɑ̃.ʒa.mɛ̃]", "Spanish: Ben-ha-meen"]
     explanation: string;
+    score?: number;
   };
 
   // **5️⃣ 东方文化分析**
@@ -60,19 +65,23 @@ export interface NameMatchAnalysis {
   baziAnalysis?: {
     matches: boolean;
     explanation: string;
+    score?: number;
   };
   qiMenDunJiaAnalysis?: {
     matches: boolean;
     explanation: string;
+    score?: number;
   };
   fengShuiAnalysis?: {
     matches: boolean;
     explanation: string;
+    score?: number;
   };
   fiveElementAnalysis?: {
     matches: boolean;
     associatedElement?: string; // 例如: "Wood"
     explanation: string;
+    score?: number;
   };
 
   // **6️⃣ 西方数秘学 & 占星学**
@@ -81,12 +90,14 @@ export interface NameMatchAnalysis {
     lifePathNumber?: number;
     personalityNumber?: number;
     explanation: string;
+    score?: number;
   };
   astrologyAnalysis?: {
     matches: boolean;
     associatedZodiac?: string; // 例如: "Capricorn, Leo"
     planetaryInfluence?: string; // 例如: "Jupiter"
     explanation: string;
+    score?: number;
   };
 
   summary?: string;
