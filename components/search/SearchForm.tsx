@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import NameSourceSelector from './NameSourceSelector';
+import { useTranslations } from 'next-intl';
 
 export interface SearchCriteria {
   gender: 'Male' | 'Female';
@@ -29,6 +30,8 @@ interface SearchFormProps {
 }
 
 export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
+  const t = useTranslations('SearchForm');
+  const commonT = useTranslations('Common');
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
     gender: 'Male',
     meaningTheme: 'open and positive',
@@ -38,7 +41,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     usePrefiltering: true
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSearch({
       gender: searchCriteria.gender,
@@ -52,10 +55,10 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   };
 
   // 处理目标匹配数量的输入变化
-  const handleTargetMatchesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
+  const handleTargetMatchesChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = Number.parseInt(e.target.value, 10);
     // 确保值在 1-50 之间
-    if (!isNaN(value)) {
+    if (!Number.isNaN(value)) {
       setSearchCriteria(prev => ({ ...prev, targetMatches: Math.min(Math.max(1, value), 50) }));
     }
   };
@@ -66,7 +69,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="gender" className="block mb-2">Gender</Label>
+              <Label htmlFor="gender" className="block mb-2">{t('gender')}</Label>
               <RadioGroup
                 id="gender"
                 value={searchCriteria.gender}
@@ -75,39 +78,38 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="Male" id="male" />
-                  <Label htmlFor="male">Male</Label>
+                  <Label htmlFor="male">{t('male')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="Female" id="female" />
-                  <Label htmlFor="female">Female</Label>
+                  <Label htmlFor="female">{t('female')}</Label>
                 </div>
               </RadioGroup>
             </div>
 
             <div>
-              <Label htmlFor="meaningTheme" className="block mb-2">Meaning Theme</Label>
+              <Label htmlFor="meaningTheme" className="block mb-2">{t('meaningTheme')}</Label>
               <Textarea
                 id="meaningTheme"
-                placeholder="Describe the meaning or theme you want for the name (e.g., strength, wisdom, nature)"
                 value={searchCriteria.meaningTheme}
                 onChange={(e) => setSearchCriteria(prev => ({ ...prev, meaningTheme: e.target.value }))}
-                className="min-h-[80px]"
+                placeholder={t('meaningThemePlaceholder')}
+                className="h-24"
               />
             </div>
 
             <div>
-              <Label htmlFor="chineseMetaphysics" className="block mb-2">Chinese Metaphysics Criteria (Optional)</Label>
-              <Textarea
+              <Label htmlFor="chineseMetaphysics" className="block mb-2">{t('chineseElement')}</Label>
+              <Input
                 id="chineseMetaphysics"
-                placeholder="Describe any Chinese metaphysics criteria (e.g., specific elements or numbers)"
                 value={searchCriteria.chineseMetaphysics}
                 onChange={(e) => setSearchCriteria(prev => ({ ...prev, chineseMetaphysics: e.target.value }))}
-                className="min-h-[80px]"
+                className="w-full"
               />
             </div>
 
             <div>
-              <Label htmlFor="targetMatches" className="block mb-2">Number of Names to Find</Label>
+              <Label htmlFor="targetMatches" className="block mb-2">{t('targetMatches')}</Label>
               <Input
                 id="targetMatches"
                 type="number"
@@ -117,7 +119,14 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
                 onChange={handleTargetMatchesChange}
                 className="w-full"
               />
-              <p className="text-xs text-gray-500 mt-1">Enter a number between 1 and 50</p>
+            </div>
+
+            <div>
+              <Label htmlFor="nameSource" className="block mb-2">{t('nameSource')}</Label>
+              <NameSourceSelector
+                value={searchCriteria.nameSource}
+                onChange={(value) => setSearchCriteria(prev => ({ ...prev, nameSource: value }))}
+              />
             </div>
 
             <div className="flex items-center space-x-2">
@@ -126,27 +135,22 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
                 id="usePrefiltering"
                 checked={searchCriteria.usePrefiltering}
                 onChange={(e) => setSearchCriteria(prev => ({ ...prev, usePrefiltering: e.target.checked }))}
-                className="rounded border-gray-300"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <Label htmlFor="usePrefiltering">Use prefiltering (faster results)</Label>
+              <Label htmlFor="usePrefiltering">{t('usePrefiltering')}</Label>
             </div>
 
-            <NameSourceSelector
-              value={searchCriteria.nameSource || 'ssa'}
-              onChange={(value) => setSearchCriteria(prev => ({ ...prev, nameSource: value as 'ssa' | 'popCulture' }))}
-            />
+            <Button type="submit" disabled={isLoading} className="w-full">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {commonT('loading')}
+                </>
+              ) : (
+                t('search')
+              )}
+            </Button>
           </div>
-
-          <Button type="submit" disabled={isLoading} className="w-full mt-4">
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Searching...
-              </>
-            ) : (
-              'Search Names'
-            )}
-          </Button>
         </form>
       </CardContent>
     </Card>

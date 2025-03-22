@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getCacheStats } from '@/lib/cache/name-analysis-cache';
+import { useTranslations } from 'next-intl';
 
 export default function CacheStats() {
-  const [stats, setStats] = useState({ totalEntries: 0, avgAge: 0 });
+  const t = useTranslations('SearchPage');
+  const [stats, setStats] = useState({ totalEntries: 0, totalSize: '0 KB' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function CacheStats() {
     try {
       await fetch('/api/admin/clear-cache', { method: 'POST' });
       // 更新统计信息
-      setStats({ totalEntries: 0, avgAge: 0 });
+      setStats({ totalEntries: 0, totalSize: '0 KB' });
     } catch (error) {
       console.error('Error clearing cache:', error);
     } finally {
@@ -38,27 +40,27 @@ export default function CacheStats() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Name Analysis Cache</CardTitle>
+        <CardTitle>Cache Statistics</CardTitle>
+        <CardDescription>Information about name analysis cache</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Cached Entries</p>
+            <p className="text-sm font-medium">Total Entries</p>
             <p className="text-2xl font-bold">{stats.totalEntries}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Average Age (days)</p>
-            <p className="text-2xl font-bold">{stats.avgAge.toFixed(1)}</p>
+            <p className="text-sm font-medium">Total Size</p>
+            <p className="text-2xl font-bold">{stats.totalSize}</p>
           </div>
         </div>
-
         <Button
           variant="destructive"
           disabled={loading || stats.totalEntries === 0}
           onClick={handleClearCache}
           className="w-full"
         >
-          {loading ? 'Clearing...' : 'Clear Cache'}
+          {loading ? t('clearing') : t('clearCache')}
         </Button>
       </CardContent>
     </Card>

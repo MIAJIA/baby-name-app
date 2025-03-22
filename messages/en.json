@@ -1,0 +1,69 @@
+{
+  "Navigation": {
+    "appName": "Baby Name App",
+    "search": "Search",
+    "analyzeName": "Analyze Name",
+    "favorites": "Favorites",
+    "githubRepo": "GitHub repository",
+    "openMainMenu": "Open main menu"
+  },
+  "LanguageSelector": {
+    "language": "Language",
+    "english": "English",
+    "chinese": "中文",
+    "spanish": "Español"
+  },
+  "HomePage": {
+    "title": "Baby Name App",
+    "subtitle": "Find the perfect baby name with meanings and analysis",
+    "redirecting": "Redirecting to search..."
+  },
+  "SearchPage": {
+    "searchResults": "Search Results",
+    "noResults": "No results found. Try different search criteria.",
+    "searchingMessage": "Searching...",
+    "matchesFound": "Found {{count}} matching names",
+    "namesProcessed": "Processed {{count}} names",
+    "searchDuration": "Search completed in {{duration}} seconds",
+    "clearResults": "Clear Results",
+    "viewFavorites": "View Favorites",
+    "addToFavorites": "Add to Favorites",
+    "removeFromFavorites": "Remove from Favorites",
+    "viewDetails": "View Details",
+    "error": "Error",
+    "searchError": "An error occurred during the search. Please try again.",
+    "findYourPerfectBabyName": "Find Your Perfect Baby Name",
+    "searchingForNames": "Searching for Names...",
+    "namesProcessedLabel": "Names Processed:",
+    "matchesFoundLabel": "Matches Found:",
+    "matchesSoFar": "Matches So Far",
+    "eachNameAnalyzed": "Each name is analyzed for meaning, origin, and compatibility with your criteria.",
+    "searchInProgress": "Search in progress for",
+    "searchLongerMessage": "This search is taking longer than usual. You can continue waiting or try with fewer names.",
+    "cancelSearch": "Cancel Search",
+    "preliminaryResults": "Preliminary Results ",
+    "namesInfoMessage": "Number of Names to Find: This is the number of matching names you want to find, not the total number of names to search through. Higher numbers will take longer to process.",
+    "viewAllFavorites": "View All Favorites",
+    "clearCache": "Clear Cache",
+    "clearing": "Clearing..."
+  },
+  "SearchForm": {
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "meaningTheme": "Meaning Theme",
+    "meaningThemePlaceholder": "e.g., strength, wisdom, nature",
+    "chineseElement": "Chinese Element Preference",
+    "targetMatches": "Number of Results",
+    "nameSource": "Name Source",
+    "usePrefiltering": "Use Intelligent Prefiltering",
+    "search": "Search Names"
+  },
+  "NameSourceSelector": {
+    "ssaDatabase": "U.S. SSA Database",
+    "popCulture": "Pop Culture Names"
+  },
+  "Common": {
+    "loading": "Loading..."
+  }
+} 
